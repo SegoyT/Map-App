@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:f="http://java.sun.com/jsf/core">
+<h:head>
+	<title>OpenLayers Demo</title>
+	<link rel="stylesheet" href="../Kartenapp/css/ol.css" type="text/css" />
+	<style type="text/css">
+html, body {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+}
+
+#map {
+	width: 100%;
+	height: 100%;
+	postion: absolute;
+	top: 0;
+	left: 0;
+}
+
+#controlButton {
+	position: fixed;
+	top: 10px;
+	right: 20px;
+}
+
+#controlPanel {
+	position: fixed;
+	top: 30px;
+	left: 90%;
+	width: 25%;
+	height: 60%;
+}
+
+#layertable {
+	width: 100%;
+	float: right;
+}
+
+#fileupload {
+	float: right;
+	width: 100%;
+}
+</style>
+</h:head>
+<body>
+	<h:form id="map" class="map"></h:form>
+	<script src="../Kartenapp/js/ol.js"></script>
+	<script>
+		var osmLayer = new ol.layer.Tile({
+			source : new ol.source.OSM()
+		});
+
+		var layers = [ osmLayer ];
+		// var storedLayers = {};
+
+		var map = new ol.Map({
+			target : 'map',
+			layers : layers,
+			view : new ol.View({
+				center : ol.proj.transform([ 10.044683, 50.689848 ],
+						'EPSG:4326', 'EPSG:3857'),
+				zoom : 6
+			})
+		});
+
+		function addGsLayer(layerName) {
+			//var layer = layerName;
+			var imgLayer = new ol.layer.Image({
+				opacity : 0.3,
+				source : new ol.source.ImageWMS({
+					url : 'http://localhost:8082/geoserver/wms',
+					params : {
+						'LAYERS' : 'Postgis:' + layerName
+					},
+					serverType : 'geoserver'
+				})
+			})
+			imgLayer.set('name', layerName);
+
+			layers.push(imgLayer);
+			map.addLayer(imgLayer);
+
+		}
+
+		function setLayerVisible(layerName, active) {
+			for (var i = layers.length - 1; i >= 0; i--) {
+				if (layers[i].get('name') == layerName) {
+					var vis;
+					if (active == "true") {
+						vis = true;
+					} else if (active == "false") {
+						vis = false;
+					}
+					layers[i].setVisible(vis);
+				}
+			}
+		}
+	</script>
+
+
+	<p:commandButton id="controlButton" value="Controls" type="button"
+		action="click" />
+	<p:overlayPanel id="controlPanel" for="controlButton" hideEffect="fade"
+		dismissable="false">
+		<h:form id="layertable">
+			<p:dataTable var="layer" value="#{MapBean.layers}">
+				<p:column style="width : 20px">
+					<p:selectBooleanCheckbox value="#{layer.active}"
+						styleClass="#{layer.name}">
+						<f:ajax event="change" render="@form :layerupdate" />
+					</p:selectBooleanCheckbox>
+				</p:column>
+				<p:column>
+				#{layer.name}<br />
+					<p:panelGrid id="layerupdate">
+						<h:outputScript>				
+					setLayerVisible("#{layer.name}", "#{layer.active}")
+		</h:outputScript>
+					</p:panelGrid>
+				</p:column>
+
+			</p:dataTable>
+		</h:form>
+
+
+
+		<h:form enctype="multipart/form-data" id="fileupload">
+			<p:fileUpload fileUploadListener="#{MapBean.upload}"
+				oncomplete="PF('dialog').show();" update="dialogBody" />
+			<br />
+			<p:dialog header="Einstellungen" widgetVar="dialog" minHeight="120">
+				<p:panel id="dialogBody">
+					<h:outputText value="#{MapBean.dialogMessage}" />
+					<h:inputText binding="#{input}" value="#{MapBean.epsg}" />
+					<h:commandButton value="OK"
+						action="#{MapBean.publish(input.value)}" />
+				</p:panel>
+			</p:dialog>
+			<h:panelGroup id="addLayer">
+				<ui:repeat var="layer" value="#{MapBean.getLayerNames()}">
+					<h:outputScript>
+			addGsLayer("#{layer}")
+		</h:outputScript>
+				</ui:repeat>
+				<h:outputScript>
+		document.getElementById("controlButton").click();</h:outputScript>
+			</h:panelGroup>
+		</h:form>
+	</p:overlayPanel>
+</body>
+</html>
