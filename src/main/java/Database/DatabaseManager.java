@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
@@ -24,9 +25,10 @@ import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.jdbc.JDBCDataStore;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
+import org.opengis.feature.type.AttributeDescriptor;
 
 public class DatabaseManager {
-	private Map<String,Object> params;
+	private Map<String, Object> params;
 	private JDBCDataStore dataStore;
 	private String epsg;
 	private double minX;
@@ -35,12 +37,12 @@ public class DatabaseManager {
 	private double maxY;
 	private String geometryType;
 	private String tName;
+	private Map<String, String> attributes = new HashMap<String,String>();
 	private boolean uploaded;
 
-	
 	public DatabaseManager() {
-		
-		this.params = new HashMap<String,Object>();
+
+		this.params = new HashMap<String, Object>();
 		this.params.put("dbtype", "postgis");
 		this.params.put("host", "localhost");
 		this.params.put("port", new Integer(5432));
@@ -53,10 +55,9 @@ public class DatabaseManager {
 	public void addFile(InputStream fileStream, String name) {
 		uploaded = false;
 		try {
-			
+
 			// TODO: Pfad anpassen
-			OutputStream os = new FileOutputStream("./"
-					+ name);
+			OutputStream os = new FileOutputStream("./" + name);
 			byte[] buffer = new byte[1024];
 			int bytesRead;
 			// read from fileStream to buffer
@@ -85,51 +86,55 @@ public class DatabaseManager {
 			this.tName = name;
 		}
 		if (fileImport != null) {
-			try{
-			this.dataStore = (JDBCDataStore) DataStoreFinder.getDataStore(this.params);
-			fileImport.setFile(file, name);
-			fileImport.handleFile();
-			this.epsg = fileImport.getEpsg();
-			this.geometryType = fileImport.getGeomType();
+			try {
+				this.dataStore = (JDBCDataStore) DataStoreFinder
+						.getDataStore(this.params);
+				fileImport.setFile(file, name);
+				fileImport.handleFile();
+				this.epsg = fileImport.getEpsg();
+				this.geometryType = fileImport.getGeomType();
 
-			try{
-			writeFeaturesToDB(fileImport.getCollection(),name);	
-			}catch(Exception e){
-				System.err.println("ERROR: Database Schema "+name+ " already exists. Please try another File.");
-				dataStore.dispose();
-			}
-			
-			}catch (Exception e) {
+				try {
+					writeFeaturesToDB(fileImport.getCollection(), name);
+				} catch (Exception e) {
+					System.err.println("ERROR: Database Schema " + name
+							+ " already exists. Please try another File.");
+					e.printStackTrace();
+					dataStore.dispose();
+				}
+
+			} catch (Exception e) {
 				this.dataStore.dispose();
 				file.delete();
 				e.printStackTrace();
-			}finally{
+			} finally {
 				file.delete();
 				this.dataStore.dispose();
 			}
-			
-			
+
 		}
 		file.delete();
 	}
-	public void deleteTable(String name) throws IOException, SQLException{
+
+	public void deleteTable(String name) throws IOException, SQLException {
 		dataStore = (JDBCDataStore) DataStoreFinder.getDataStore(this.params);
 		Connection con = this.dataStore.getDataSource().getConnection();
-		String dropTable = "Drop TABLE public.\""+name+"\";";
+		String dropTable = "Drop TABLE public.\"" + name + "\";";
 		con.prepareStatement(dropTable).execute();
 		System.out.println("INFORMATION: DataTable deleted!");
 		con.close();
 		dataStore.dispose();
 	}
 
-	public void writeFeaturesToDB(final FeatureCollection<SimpleFeatureType, SimpleFeature> dbCollection,
-			final String tableName)
-			throws Exception {
+	public void writeFeaturesToDB(
+			final FeatureCollection<SimpleFeatureType, SimpleFeature> dbCollection,
+			final String tableName) throws Exception {
 		try {
 			final SimpleFeatureType dbSchema = dbCollection.getSchema();
 			this.dataStore.createSchema(dbSchema);
-			
-			final SimpleFeatureSource dbSource = this.dataStore.getFeatureSource(dbSchema.getName().toString());
+
+			final SimpleFeatureSource dbSource = this.dataStore
+					.getFeatureSource(dbSchema.getName().toString());
 
 			// write features into db table
 			if (dbSource instanceof SimpleFeatureStore) {
@@ -143,22 +148,31 @@ public class DatabaseManager {
 					t.commit();
 					t.close();
 				} catch (final IOException e) {
-					System.out.println("Error while trying to commit features into database "+e);
+					System.out
+							.println("Error while trying to commit features into database "
+									+ e);
+					e.printStackTrace();
 					t.rollback();
 					t.close();
 					throw new Exception();
 				}
-
-				System.out.println(dbCollection.getSchema().getCoordinateReferenceSystem());
-				System.out.println(dbCollection.getSchema().getGeometryDescriptor());
-				
 
 				final ReferencedEnvelope env = dbCollection.getBounds();
 				this.minX = env.getMinX();
 				this.minY = env.getMinY();
 				this.maxX = env.getMaxX();
 				this.maxY = env.getMaxY();
-				
+
+				for (AttributeDescriptor dbAttribute : dbSchema
+						.getAttributeDescriptors()) {
+					String feature = dbAttribute.getLocalName();
+					if (dbAttribute.getType() != null) {
+						String type = dbAttribute.getType().getBinding().getName();
+						attributes.put(feature, type);
+						
+					}
+					System.out.println(feature + "   " );
+				}
 
 				this.dataStore.dispose();
 				uploaded = true;
@@ -169,32 +183,44 @@ public class DatabaseManager {
 				throw new Exception();
 			}
 		} catch (final SQLException | IOException e) {
-			System.out.println("Error processing file"+ e);
+			System.out.println("Error processing file" + e);
 			throw new Exception();
 		}
-		
+
 	}
-	public double getminX(){
+
+	public Map<String, String> getAttributes() {
+		return attributes;
+	}
+
+	public double getminX() {
 		return this.minX;
 	}
-	public double getminY(){
+
+	public double getminY() {
 		return this.minY;
 	}
-	public double getmaxX(){
+
+	public double getmaxX() {
 		return this.maxX;
 	}
-	public double getmaxY(){
+
+	public double getmaxY() {
 		return this.maxY;
 	}
-	public String getEpsg(){
+
+	public String getEpsg() {
 		return this.epsg;
 	}
-	public String getgeomType(){
+
+	public String getgeomType() {
 		return this.geometryType;
 	}
-	public String getTableName(){
+
+	public String getTableName() {
 		return this.tName;
 	}
+
 	public boolean isUploaded() {
 		return uploaded;
 	}

@@ -35,7 +35,7 @@ html, body {
 	top: 30px;
 	left: 90%;
 	width: 25%;
-	height: 60%;
+	height: 700px;
 }
 
 #layertable {
@@ -118,41 +118,77 @@ html, body {
 					</p:selectBooleanCheckbox>
 				</p:column>
 				<p:column>
-				#{layer.name}<br />
+					<p:accordionPanel>
+						<p:tab title="#{layer.name}">
+							<h:outputText value="Opacity: " />
+							<p:slider for="opcty" />
+							<h:inputHidden id="opcty" value="0,5" />
+						</p:tab>
+					</p:accordionPanel>
 					<p:panelGrid id="layerupdate">
 						<h:outputScript>				
 					setLayerVisible("#{layer.name}", "#{layer.active}")
 		</h:outputScript>
 					</p:panelGrid>
 				</p:column>
-
 			</p:dataTable>
 		</h:form>
-   
-
 
 		<h:form enctype="multipart/form-data" id="fileupload">
 			<p:fileUpload fileUploadListener="#{MapBean.upload}"
-				oncomplete="PF('dialog').show();" update="dialogBody" />
-			<br />
-			<p:dialog header="Einstellungen" widgetVar="dialog" minHeight="120">
-				<p:panel id="dialogBody">
+				oncomplete="PF('dialog').show(); hideText()" update="dlg:dialogBody"
+				fileLimit="1" />
+		</h:form>
+		<h:form id="dlg">
+			<p:dialog header="Einstellungen" widgetVar="dialog" minHeight="120"
+				id="dialog">
+				<h:panelGrid columns="2" cellpadding="5" id="dialogBody">
 					<h:outputText value="#{MapBean.dialogMessage}" />
-					<h:inputText binding="#{input}" value="#{MapBean.epsg}" />
-					<h:commandButton value="OK"
-						action="#{MapBean.publish(input.value)}" />
-				</p:panel>
+					<p:inputText binding="#{input}" value="#{MapBean.epsg}" />
+					<h:outputText value="Fill: " />
+					<p:colorPicker value="#{MapBean.fill}" widgetVar="colorPicker" />
+					<h:outputText value="Dash Color: " />
+					<p:colorPicker value="#{MapBean.dashColor}"
+						widgetVar="colorPicker2" />
+					<p:selectOneMenu id="attributes" value="#{inputAttr}">
+						<f:selectItem itemLabel="Select Attribute" itemValue=""
+							noSelectionOption="true" />
+						<f:selectItems value="#{MapBean.getAttributes()}" />
+					</p:selectOneMenu>
+				</h:panelGrid>
+
+				<p:commandButton value="OK"
+					action="#{MapBean.publish(input.value, 'circle', MapBean.dashColor, MapBean.fill)}"
+					update="add:addLayer layertable dialogBody" onclick="dialog.hide()" />
+
+
 			</p:dialog>
+		</h:form>
+		<h:form id="add">
 			<h:panelGroup id="addLayer">
 				<ui:repeat var="layer" value="#{MapBean.getLayerNames()}">
 					<h:outputScript>
 			addGsLayer("#{layer}")
 		</h:outputScript>
 				</ui:repeat>
-				<h:outputScript>
-		document.getElementById("controlButton").click();</h:outputScript>
 			</h:panelGroup>
 		</h:form>
+
+		<script>
+			function hideText() {
+				console
+						.log($(
+								'table#dlg\\:dialogBody tr:nth-child(1) td:nth-child(1)')
+								.text());
+				if ($('table#dlg\\:dialogBody tr:nth-child(1) td:nth-child(1)')
+						.text().indexOf('Error') > -1) {
+					$('table#dlg\\:dialogBody')
+							.html(
+									"Error, file already exists in Database, please try another one!");
+				}
+			}
+		</script>
+
 	</p:overlayPanel>
 </body>
 </html>

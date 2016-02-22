@@ -1,17 +1,19 @@
 package servlet;
 
+import it.geosolutions.geoserver.rest.decoder.RESTFeatureType.Attribute;
+
 import java.util.Arrays;
 import java.util.List;
 
 public class Layer {
 
 	private final String name;
-	private final List<Double> bounds;
+	private final List<Attribute> features;
 	private boolean active = true;
 
-	public Layer(String name, double minX, double minY, double maxX, double maxY) {
+	public Layer(String name, List<Attribute> fType) {
 		this.name = name;
-		this.bounds = Arrays.asList(minX, minY, maxX, maxY);
+		this.features = fType;
 	}
 
 	
@@ -21,8 +23,8 @@ public class Layer {
 		return name;
 	}
 
-	public List<Double> getbounds() {
-		return bounds;
+	public List<Attribute> getFeatures(){
+		return features;
 	}
 
 	public void setActive(boolean active) {

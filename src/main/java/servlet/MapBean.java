@@ -7,6 +7,7 @@ import java.net.MalformedURLException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.PostConstruct;
 import javax.faces.bean.ManagedBean;
@@ -14,6 +15,7 @@ import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.SessionScoped;
 import javax.servlet.http.Part;
 
+import org.apache.tomcat.jni.Time;
 import org.primefaces.event.FileUploadEvent;
 import org.primefaces.model.UploadedFile;
 
@@ -34,17 +36,30 @@ public class MapBean {
 	private GeoserverLayerPublisher publisher;
 	private String dialogMessage;
 	private String epsg;
+	private String fill = "101010";
+	private String dashColor= "e0e0e0";
+
+	public String getFill() {
+		return fill;
+	}
+
+	public void setFill(String fill) {
+		this.fill = fill;
+	}
+
+	public String getDashColor() {
+		return dashColor;
+	}
+
+	public void setDashColor(String dashColor) {
+		this.dashColor = dashColor;
+	}
 
 	public MapBean() {
 		System.out.println("INFORMATION: Server started!");
 		publisher = new GeoserverLayerPublisher();
-		try {
-			for (String layer : publisher.getLayers()) {
-				layers.add(new Layer(layer, 0.0, 0.0, 0.0, 0.0));
-			}
-		} catch (MalformedURLException e) {
-			System.out.println("ERROR: Inkorrekte Geoserver URL!");
-			e.printStackTrace();
+		for (String layer : publisher.getLayers()) {
+			layers.add(new Layer(layer, publisher.getFeatureType(layer)));
 		}
 		System.out.println("INFORMATION: Existing Layers added");
 	}
@@ -62,41 +77,50 @@ public class MapBean {
 			e.printStackTrace();
 		}
 		setEpsg(dbm.getEpsg());
-		
+
 		if (dbm.isUploaded()) {
 			if (dbm.getEpsg().equals("")) {
 				dialogMessage = "No EPSG was found, Epsg: ";
 			} else {
 				dialogMessage = "Epsg was found: ";
 			}
-		}
-		else {
-			dialogMessage = "File could not be Uploaded, File already exists!";
+		} else {
+			dialogMessage = "Error, File already exists in database!";
+			setEpsg("");
 		}
 	}
 
-	public void publish(String epsg) {
+	public void publish(String epsg, String symbol, String strichFarbe, String fuellFarbe) {
+		System.out.println(strichFarbe +"    "+ fuellFarbe + "    "+ symbol);
+		if (epsg.length() > 3) {
+			publisher = new GeoserverLayerPublisher();
+			if (publisher.createLayer(dbm.getTableName(), "EPSG:" + epsg,
+					dbm.getminX(), dbm.getminY(), dbm.getmaxX(), dbm.getmaxY(),
+					dbm.getgeomType())) {
+				publisher.setStyle(dbm.getgeomType(), dbm.getTableName(), symbol, "#"+strichFarbe, "#"+fuellFarbe);
+				layers.add(new Layer(dbm.getTableName(), publisher.getFeatureType(dbm.getTableName())));
 
-		publisher = new GeoserverLayerPublisher();
-		if (publisher.createLayer(dbm.getTableName(), "EPSG:" + epsg,
-				dbm.getminX(), dbm.getminY(), dbm.getmaxX(), dbm.getmaxY(),
-				dbm.getgeomType())) {
-			layers.add(new Layer(dbm.getTableName(), dbm.getminX(), dbm
-					.getminY(), dbm.getmaxX(), dbm.getmaxY()));
+				dialogMessage = "Layer published!";
+			} else {
+				try {
+					if (!getLayerNames().contains(dbm.getTableName())) {
+						dbm.deleteTable(dbm.getTableName());
+					}
+				} catch (IOException | SQLException e1) {
+					System.err.println("ERROR: failed to delete Table");
+					e1.printStackTrace();
+					dialogMessage = "Layer could not be created";
+				}
 
-			dialogMessage = "Layer published!";
-		} else {
-			try {
-				dbm.deleteTable(dbm.getTableName());
-				dialogMessage = "Layer could not be created";
-			} catch (IOException | SQLException e1) {
-				System.err.println("ERROR: failed to delete Table");
-				e1.printStackTrace();
-				dialogMessage = "Layer could not be created";
 			}
-
+		}
+		else{
+			dialogMessage="Could not publish Layer!";
 		}
 
+	}
+	public Map<String, String> getAttributes(){
+		return dbm.getAttributes();
 	}
 
 	public List<Layer> getLayers() {

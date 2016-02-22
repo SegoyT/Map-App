@@ -2,10 +2,13 @@ package Geoserver;
 
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import it.geosolutions.geoserver.rest.GeoServerRESTPublisher;
 import it.geosolutions.geoserver.rest.GeoServerRESTReader;
+import it.geosolutions.geoserver.rest.decoder.RESTFeatureType;
+import it.geosolutions.geoserver.rest.decoder.RESTFeatureType.Attribute;
 import it.geosolutions.geoserver.rest.decoder.RESTLayerList;
 import it.geosolutions.geoserver.rest.decoder.utils.NameLinkElem;
 import it.geosolutions.geoserver.rest.encoder.GSLayerEncoder;
@@ -17,6 +20,7 @@ public class GeoserverLayerPublisher {
 	private final String restUser = "admin";
 	private final String restPw = "geoserver";
 	private final GSFeatureTypeEncoder fte;
+	private GeoServerRESTReader reader;
 
 	private final GSLayerEncoder gsl;
 
@@ -30,6 +34,13 @@ public class GeoserverLayerPublisher {
 		this.publisher = new GeoServerRESTPublisher(restUrl, restUser, restPw);
 		this.fte = new GSFeatureTypeEncoder();
 		this.gsl = new GSLayerEncoder();
+		try {
+			this.reader = new GeoServerRESTReader(restUrl, restUser,
+					restPw);
+		} catch (MalformedURLException e) {
+			System.err.println("ERROR: Could not initialize GeoserverRESTReader!");
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -65,7 +76,7 @@ public class GeoserverLayerPublisher {
 		boolean published = this.publisher.publishDBLayer("Postgis",
 				"Kartenapp", this.fte, this.gsl);
 
-		setStyle(geomType, layerName);
+//		setStyle(geomType, layerName, "circle", "101010", "999999");
 
 		if (published) {
 			System.out.println("INFORMATION: Layer created!");
@@ -93,15 +104,24 @@ public class GeoserverLayerPublisher {
 		}
 	}
 
-	public List<String> getLayers() throws MalformedURLException {
+	public List<String> getLayers(){
 		List<String> layerList = new ArrayList<String>();
-		GeoServerRESTReader reader = new GeoServerRESTReader(restUrl, restUser,
-				restPw);
+		
 		RESTLayerList layers = reader.getLayers();
 		for (NameLinkElem layer : layers) {
 			layerList.add(layer.getName());
 		}
 		return layerList;
+	}
+	
+	public List<Attribute> getFeatureType(String layer){
+		RESTFeatureType fType = reader.getFeatureType(reader.getLayer("Postgis", layer));
+		Iterator<Attribute> featureIter = fType.attributesIterator();
+		List<Attribute> features = new ArrayList<Attribute>();
+		while (featureIter.hasNext()){
+			features.add(featureIter.next());
+		}
+		return features;
 	}
 
 	/**
@@ -112,21 +132,19 @@ public class GeoserverLayerPublisher {
 	 * @param styleType
 	 *            Name des Layers/Stils
 	 */
-	public void setStyle(String styleType, String styleName) {
+	public void setStyle(String styleType, String styleName, String symbol, String strichFarbe, String fuellFarbe) {
 		System.out.println("Setting GeoServer style on " + styleType);
-		this.gsl.setEnabled(true);
-		this.gsl.setQueryable(true);
 		String sld = GeoserverStyleSet.doSimpleSLD(styleName, styleType,
-				"example", "circle", 6, 1, "101010", "202020");
+				"example", symbol, 6, 1, strichFarbe, fuellFarbe);
 
 		boolean published = this.publisher.publishStyleInWorkspace("Postgis",
 				sld, styleName);
+		System.out.println(published + "\n"+ sld);
 		if (published == false) {
 			this.publisher.removeStyleInWorkspace("Postgis", styleName);
 			published = this.publisher.publishStyleInWorkspace("Postgis", sld,
 					styleName);
 		}
-		boolean hope = this.publisher.reload();
 		this.gsl.setDefaultStyle("Postgis:" + styleName);
 		boolean configured = this.publisher.configureLayer("Postgis",
 				styleName, this.gsl);
