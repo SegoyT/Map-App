@@ -1,6 +1,8 @@
 package Geoserver;
 
+import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 
 import org.apache.commons.lang.StringEscapeUtils;
 
@@ -22,45 +24,45 @@ public class GeoserverStyleSet {
 	return bodySld;
 }
 
-//private static String getFilterBereicheSld(final String attr, final String wertGreaterEquals, final String wertLess) {
-//	//@formatter:off
-//	final String filterSld = "" +
-//			"          <ogc:Filter>\n" +
-//			"            <ogc:And>\n" +
-//			"              <ogc:PropertyIsGreaterThanOrEqualTo>\n" +
-//			"                <ogc:PropertyName>%s</ogc:PropertyName>\n" +
-//			"                <ogc:Literal>%s</ogc:Literal>\n" +
-//			"              </ogc:PropertyIsGreaterThanOrEqualTo>\n" +
-//			"              <ogc:PropertyIsLessThan>\n" +
-//			"                <ogc:PropertyName>%s</ogc:PropertyName>\n" +
-//			"                <ogc:Literal>%s</ogc:Literal>\n" +
-//			"              </ogc:PropertyIsLessThan>\n" +
-//			"            </ogc:And>\n" +
-//			"          </ogc:Filter>\n";
-//	// @formatter:on
-//	final String attrEsc = StringEscapeUtils.escapeXml(attr);
-//	final String wertGreaterEqualsEsc = StringEscapeUtils.escapeXml(wertGreaterEquals);
-//	final String wertLessEsc = StringEscapeUtils.escapeXml(wertLess);
-//
-//	final String filter = String.format(Locale.US, filterSld, attrEsc, wertGreaterEqualsEsc, attrEsc, wertLessEsc);
-//	return filter;
-//}
+private static String getFilterBereicheSld(final String attr, final String wertGreaterEquals, final String wertLess) {
+	//@formatter:off
+	final String filterSld = "" +
+			"          <ogc:Filter>\n" +
+			"            <ogc:And>\n" +
+			"              <ogc:PropertyIsGreaterThanOrEqualTo>\n" +
+			"                <ogc:PropertyName>%s</ogc:PropertyName>\n" +
+			"                <ogc:Literal>%s</ogc:Literal>\n" +
+			"              </ogc:PropertyIsGreaterThanOrEqualTo>\n" +
+			"              <ogc:PropertyIsLessThan>\n" +
+			"                <ogc:PropertyName>%s</ogc:PropertyName>\n" +
+			"                <ogc:Literal>%s</ogc:Literal>\n" +
+			"              </ogc:PropertyIsLessThan>\n" +
+			"            </ogc:And>\n" +
+			"          </ogc:Filter>\n";
+	// @formatter:on
+	final String attrEsc = StringEscapeUtils.escapeXml(attr);
+	final String wertGreaterEqualsEsc = StringEscapeUtils.escapeXml(wertGreaterEquals);
+	final String wertLessEsc = StringEscapeUtils.escapeXml(wertLess);
 
-//private static String getFilterEinzelwertSld(final String attr, final String wertEquals) {
-//	//@formatter:off
-//	final String filterSld = "" +
-//			"          <ogc:Filter>\n" +
-//			"            <ogc:PropertyIsEqualTo>\n" +
-//			"              <ogc:PropertyName>%s</ogc:PropertyName>\n" +
-//			"              <ogc:Literal>%s</ogc:Literal>\n" +
-//			"            </ogc:PropertyIsEqualTo>\n" +
-//			"          </ogc:Filter>";
-//	// @formatter:on
-//	final String attrEsc = StringEscapeUtils.escapeXml(attr);
-//	final String wertEqualsEsc = StringEscapeUtils.escapeXml(wertEquals);
-//	final String filter = String.format(Locale.US, filterSld, attrEsc, wertEqualsEsc);
-//	return filter;
-//}
+	final String filter = String.format(Locale.US, filterSld, attrEsc, wertGreaterEqualsEsc, attrEsc, wertLessEsc);
+	return filter;
+}
+
+private static String getFilterEinzelwertSld(final String attr, final String wertEquals) {
+	//@formatter:off
+	final String filterSld = "" +
+			"          <ogc:Filter>\n" +
+			"            <ogc:PropertyIsEqualTo>\n" +
+			"              <ogc:PropertyName>%s</ogc:PropertyName>\n" +
+			"              <ogc:Literal>%s</ogc:Literal>\n" +
+			"            </ogc:PropertyIsEqualTo>\n" +
+			"          </ogc:Filter>";
+	// @formatter:on
+	final String attrEsc = StringEscapeUtils.escapeXml(attr);
+	final String wertEqualsEsc = StringEscapeUtils.escapeXml(wertEquals);
+	final String filter = String.format(Locale.US, filterSld, attrEsc, wertEqualsEsc);
+	return filter;
+}
 
 private static String getFooterSld() {
 	//@formatter:off
@@ -210,7 +212,55 @@ private static String getRuleHeaderSld(final String beschriftung) {
 	return ruleHeader;
 }
 
+/**
+ * Create a more complex SLD
+ *
+ * @param bnbMapLayer
+ *            the layer obj
+ *
+ * @param selectedAttr
+ *            das shape Attribute mit den Klassen
+ */
+public static String doComplexSLD(String tableName, String styleType, String attr, List attrClasses) {
+	final String styleName = tableName;
+	// Oracle stores attribute names in upper case
+	final String attrName = attr.toUpperCase();
+	final String header = getHeaderSld(styleName);
+	final String footer = getFooterSld();
 
+	final StringBuilder sld = new StringBuilder();
+
+	sld.append(header);
+
+	// need to consider all added plus the tmp class
+
+	for (int i=0; i< attrClasses.size();i++) {
+		final String ruleHeader = getRuleHeaderSld(attrClasses.get(i).toString());
+		final String filter;
+		//TODO: neue Bedingung!!!!!!
+		if (attrClasses.size() != 10) {
+			filter = getFilterEinzelwertSld(attrName, attrClasses.get(i).toString());
+		} else {
+			filter = getFilterBereicheSld(attrName, attrClasses.get(i).toString(), attrClasses.get(i+1).toString());
+		}
+		
+		//TODO: für Body zufällige Farben symbolgröße anpassbar, usw
+		final String body = getBodySld(styleType, "circle", 6, rdColor(),
+				rdColor(), 1);
+		final String ruleFooter = getRuleFooterSld();
+		sld.append(ruleHeader + filter + body + ruleFooter);
+	}
+
+	sld.append(footer);
+	return(sld.toString());
+
+}
+
+private static String rdColor(){
+	Random rd = new Random();
+	int number = (int) (16777215*rd.nextFloat());
+	return "#"+Integer.toHexString(number);
+}
 
 /**
  * Creates a non-classified SLD

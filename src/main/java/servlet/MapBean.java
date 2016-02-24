@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.PostConstruct;
 import javax.faces.bean.ManagedBean;
@@ -38,6 +39,15 @@ public class MapBean {
 	private String epsg;
 	private String fill = "101010";
 	private String dashColor= "e0e0e0";
+	private String styleAttr;
+
+	public String getStyleAttr() {
+		return styleAttr;
+	}
+
+	public void setStyleAttr(String styleAttr) {
+		this.styleAttr = styleAttr;
+	}
 
 	public String getFill() {
 		return fill;
@@ -59,7 +69,7 @@ public class MapBean {
 		System.out.println("INFORMATION: Server started!");
 		publisher = new GeoserverLayerPublisher();
 		for (String layer : publisher.getLayers()) {
-			layers.add(new Layer(layer, publisher.getFeatureType(layer)));
+			layers.add(new Layer(layer, publisher.getAttributes(layer)));
 		}
 		System.out.println("INFORMATION: Existing Layers added");
 	}
@@ -90,16 +100,23 @@ public class MapBean {
 		}
 	}
 
-	public void publish(String epsg, String symbol, String strichFarbe, String fuellFarbe) {
-		System.out.println(strichFarbe +"    "+ fuellFarbe + "    "+ symbol);
+	public void publish(String epsg, String symbol) {
+		System.out.println(dashColor +"    "+ fill + "    "+ symbol);
 		if (epsg.length() > 3) {
 			publisher = new GeoserverLayerPublisher();
 			if (publisher.createLayer(dbm.getTableName(), "EPSG:" + epsg,
 					dbm.getminX(), dbm.getminY(), dbm.getmaxX(), dbm.getmaxY(),
 					dbm.getgeomType())) {
-				publisher.setStyle(dbm.getgeomType(), dbm.getTableName(), symbol, "#"+strichFarbe, "#"+fuellFarbe);
-				layers.add(new Layer(dbm.getTableName(), publisher.getFeatureType(dbm.getTableName())));
-
+				List styleValues;
+				try {
+					styleValues = dbm.getAttrValues(styleAttr, dbm.getTableName());
+				} catch (IOException | SQLException e) {
+					System.err.println("ERROR: Something wrong with Attribute, will continue with basic Style!");
+					styleValues = new ArrayList<>();
+					e.printStackTrace();
+				}
+				publisher.setStyle(dbm.getgeomType(), dbm.getTableName(), symbol, dashColor, fill,styleAttr, styleValues);
+				layers.add(new Layer(dbm.getTableName(), publisher.getAttributes(dbm.getTableName())));
 				dialogMessage = "Layer published!";
 			} else {
 				try {
@@ -111,7 +128,6 @@ public class MapBean {
 					e1.printStackTrace();
 					dialogMessage = "Layer could not be created";
 				}
-
 			}
 		}
 		else{
@@ -119,8 +135,9 @@ public class MapBean {
 		}
 
 	}
-	public Map<String, String> getAttributes(){
-		return dbm.getAttributes();
+	
+	public Set<String> getAttributes(){
+		return dbm.getAttributes().keySet();
 	}
 
 	public List<Layer> getLayers() {

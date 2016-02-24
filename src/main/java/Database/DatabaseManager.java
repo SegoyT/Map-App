@@ -7,12 +7,16 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.geotools.data.DataStore;
 import org.geotools.data.DataStoreFinder;
@@ -163,15 +167,16 @@ public class DatabaseManager {
 				this.maxX = env.getMaxX();
 				this.maxY = env.getMaxY();
 
+				attributes.clear();
 				for (AttributeDescriptor dbAttribute : dbSchema
 						.getAttributeDescriptors()) {
 					String feature = dbAttribute.getLocalName();
 					if (dbAttribute.getType() != null) {
 						String type = dbAttribute.getType().getBinding().getName();
 						attributes.put(feature, type);
-						
+
+						System.out.println(feature + "   " + type );
 					}
-					System.out.println(feature + "   " );
 				}
 
 				this.dataStore.dispose();
@@ -187,6 +192,49 @@ public class DatabaseManager {
 			throw new Exception();
 		}
 
+	}
+	/*Gets all distinct Values of one Attribute of a table counts them
+	 *returns either a List of all Distinct values or a List with steps between the minimum and maximum values
+	 *
+	 *@param attribute
+	 *			the attribute
+	 *
+	 *@param tableName
+	 *			the table the query is applied to
+	 * 
+	 * 
+	 */
+	public List  getAttrValues(String attribute, String tableName) throws IOException, SQLException{
+		dataStore = (JDBCDataStore) DataStoreFinder.getDataStore(this.params);
+		Connection con = this.dataStore.getDataSource().getConnection();
+		// SQL befehl der Entweder alle Werte ausliefert, oder Wertebereich.
+		String distinct = "select distinct \""+attribute+"\" from "+tableName;
+		ResultSet rs = con.prepareCall(distinct).executeQuery();
+		List layerClasses = new ArrayList();
+		while(rs.next()){
+			layerClasses.add(rs.getObject(0));
+		}
+		if(layerClasses.size()<= 20 || attributes.get(attribute).contains("String")){
+			return layerClasses;
+		}
+		//TODO: abfragen ob Werte tatsächlich Nummern sind.
+		else{
+			String minmax = "select min(\""+attribute+"\") as min_id, max(\""+attribute+"\") as max_id from "+tableName;
+			ResultSet mm = con.prepareCall(minmax).executeQuery();
+			mm.next();
+			double min = mm.getFloat("min_id");
+			double max = mm.getFloat("max_id");
+			double step = (max-min)/10;
+			layerClasses.clear();
+			layerClasses.add(min);
+			for(double i =min ;i<max; i+=step){
+				layerClasses.add(i);
+			}
+			return layerClasses;
+			
+
+		}
+		
 	}
 
 	public Map<String, String> getAttributes() {

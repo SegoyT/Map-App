@@ -114,14 +114,14 @@ public class GeoserverLayerPublisher {
 		return layerList;
 	}
 	
-	public List<Attribute> getFeatureType(String layer){
+	public List<Attribute> getAttributes(String layer){
 		RESTFeatureType fType = reader.getFeatureType(reader.getLayer("Postgis", layer));
-		Iterator<Attribute> featureIter = fType.attributesIterator();
-		List<Attribute> features = new ArrayList<Attribute>();
-		while (featureIter.hasNext()){
-			features.add(featureIter.next());
+		Iterator<Attribute> attrIter = fType.attributesIterator();
+		List<Attribute> attributes = new ArrayList<Attribute>();
+		while (attrIter.hasNext()){
+			attributes.add(attrIter.next());
 		}
-		return features;
+		return attributes;
 	}
 
 	/**
@@ -132,11 +132,16 @@ public class GeoserverLayerPublisher {
 	 * @param styleType
 	 *            Name des Layers/Stils
 	 */
-	public void setStyle(String styleType, String styleName, String symbol, String strichFarbe, String fuellFarbe) {
-		System.out.println("Setting GeoServer style on " + styleType);
-		String sld = GeoserverStyleSet.doSimpleSLD(styleName, styleType,
+	public void setStyle(String styleType, String styleName, String symbol, String strichFarbe, String fuellFarbe,String styleAttr, List styleValues) {
+		System.out.println("Setting GeoServer style on " + styleType+ " with Attribute "+styleAttr);
+		String sld;
+		if (styleValues.isEmpty()){
+		sld = GeoserverStyleSet.doSimpleSLD(styleName, styleType,
 				"example", symbol, 6, 1, strichFarbe, fuellFarbe);
-
+		}
+		else{
+			sld = GeoserverStyleSet.doComplexSLD(styleName, styleType, styleAttr, styleValues);
+		}
 		boolean published = this.publisher.publishStyleInWorkspace("Postgis",
 				sld, styleName);
 		System.out.println(published + "\n"+ sld);
@@ -144,6 +149,7 @@ public class GeoserverLayerPublisher {
 			this.publisher.removeStyleInWorkspace("Postgis", styleName);
 			published = this.publisher.publishStyleInWorkspace("Postgis", sld,
 					styleName);
+			System.out.println(published);
 		}
 		this.gsl.setDefaultStyle("Postgis:" + styleName);
 		boolean configured = this.publisher.configureLayer("Postgis",

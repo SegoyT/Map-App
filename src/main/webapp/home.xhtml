@@ -150,15 +150,16 @@ html, body {
 					<h:outputText value="Dash Color: " />
 					<p:colorPicker value="#{MapBean.dashColor}"
 						widgetVar="colorPicker2" />
-					<p:selectOneMenu id="attributes" value="#{inputAttr}">
+					<h:outputText value="Attribute: " />
+					<p:selectOneMenu id="attributes" value="#{MapBean.styleAttr}">
 						<f:selectItem itemLabel="Select Attribute" itemValue=""
 							noSelectionOption="true" />
 						<f:selectItems value="#{MapBean.getAttributes()}" />
 					</p:selectOneMenu>
 				</h:panelGrid>
 
-				<p:commandButton value="OK"
-					action="#{MapBean.publish(input.value, 'circle', MapBean.dashColor, MapBean.fill)}"
+				<p:commandButton value="OK" 
+					action="#{MapBean.publish(input.value, 'circle')}"
 					update="add:addLayer layertable dialogBody" onclick="dialog.hide()" />
 
 
