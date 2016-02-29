@@ -132,27 +132,28 @@ public class GeoserverLayerPublisher {
 	 * @param styleType
 	 *            Name des Layers/Stils
 	 */
-	public void setStyle(String styleType, String styleName, String symbol, String strichFarbe, String fuellFarbe,String styleAttr, List styleValues) {
+	public void setStyle(String styleType, String styleName, String symbol,String styleAttr, List<Object> styleValues) {
 		System.out.println("Setting GeoServer style on " + styleType+ " with Attribute "+styleAttr);
 		String sld;
 		if (styleValues.isEmpty()){
 		sld = GeoserverStyleSet.doSimpleSLD(styleName, styleType,
-				"example", symbol, 6, 1, strichFarbe, fuellFarbe);
+				"example", symbol, 6, 1);
 		}
 		else{
-			sld = GeoserverStyleSet.doComplexSLD(styleName, styleType, styleAttr, styleValues);
+			sld = GeoserverStyleSet.doComplexSLD(styleName, styleType, symbol, styleAttr, styleValues);
 		}
 		boolean published = this.publisher.publishStyleInWorkspace("Postgis",
 				sld, styleName);
-		System.out.println(published + "\n"+ sld);
+		System.out.println("Layer published: " + published + "\n"+ sld);
 		if (published == false) {
 			this.publisher.removeStyleInWorkspace("Postgis", styleName);
 			published = this.publisher.publishStyleInWorkspace("Postgis", sld,
 					styleName);
-			System.out.println(published);
+			System.out.println("Layer published: "+ published);
 		}
 		this.gsl.setDefaultStyle("Postgis:" + styleName);
 		boolean configured = this.publisher.configureLayer("Postgis",
 				styleName, this.gsl);
+		System.out.println("Layer Configured: " + configured);
 	}
 }

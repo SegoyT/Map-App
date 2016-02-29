@@ -2,21 +2,14 @@ package servlet;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Serializable;
-import java.net.MalformedURLException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.PostConstruct;
 import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.SessionScoped;
-import javax.servlet.http.Part;
 
-import org.apache.tomcat.jni.Time;
 import org.primefaces.event.FileUploadEvent;
 import org.primefaces.model.UploadedFile;
 
@@ -37,8 +30,6 @@ public class MapBean {
 	private GeoserverLayerPublisher publisher;
 	private String dialogMessage;
 	private String epsg;
-	private String fill = "101010";
-	private String dashColor= "e0e0e0";
 	private String styleAttr;
 
 	public String getStyleAttr() {
@@ -47,22 +38,6 @@ public class MapBean {
 
 	public void setStyleAttr(String styleAttr) {
 		this.styleAttr = styleAttr;
-	}
-
-	public String getFill() {
-		return fill;
-	}
-
-	public void setFill(String fill) {
-		this.fill = fill;
-	}
-
-	public String getDashColor() {
-		return dashColor;
-	}
-
-	public void setDashColor(String dashColor) {
-		this.dashColor = dashColor;
 	}
 
 	public MapBean() {
@@ -101,22 +76,27 @@ public class MapBean {
 	}
 
 	public void publish(String epsg, String symbol) {
-		System.out.println(dashColor +"    "+ fill + "    "+ symbol);
+		
+		System.out.println("Symbol: " + symbol);
 		if (epsg.length() > 3) {
 			publisher = new GeoserverLayerPublisher();
 			if (publisher.createLayer(dbm.getTableName(), "EPSG:" + epsg,
 					dbm.getminX(), dbm.getminY(), dbm.getmaxX(), dbm.getmaxY(),
 					dbm.getgeomType())) {
-				List styleValues;
+				List<Object> styleValues;
 				try {
-					styleValues = dbm.getAttrValues(styleAttr, dbm.getTableName());
+					styleValues = dbm.getAttrValues(styleAttr,
+							dbm.getTableName());
 				} catch (IOException | SQLException e) {
-					System.err.println("ERROR: Something wrong with Attribute, will continue with basic Style!");
+					System.err
+							.println("ERROR: Something wrong with Attribute, will continue with basic Style!");
 					styleValues = new ArrayList<>();
 					e.printStackTrace();
 				}
-				publisher.setStyle(dbm.getgeomType(), dbm.getTableName(), symbol, dashColor, fill,styleAttr, styleValues);
-				layers.add(new Layer(dbm.getTableName(), publisher.getAttributes(dbm.getTableName())));
+				publisher.setStyle(dbm.getgeomType(), dbm.getTableName(),
+						symbol, styleAttr, styleValues);
+				layers.add(new Layer(dbm.getTableName(), publisher
+						.getAttributes(dbm.getTableName())));
 				dialogMessage = "Layer published!";
 			} else {
 				try {
@@ -129,14 +109,13 @@ public class MapBean {
 					dialogMessage = "Layer could not be created";
 				}
 			}
-		}
-		else{
-			dialogMessage="Could not publish Layer!";
+		} else {
+			dialogMessage = "Could not publish Layer!";
 		}
 
 	}
-	
-	public Set<String> getAttributes(){
+
+	public Set<String> getAttributes() {
 		return dbm.getAttributes().keySet();
 	}
 

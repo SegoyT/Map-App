@@ -6,19 +6,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
 
-import org.geotools.data.DataStore;
+
 import org.geotools.data.DataStoreFinder;
 import org.geotools.data.DefaultTransaction;
 import org.geotools.data.Transaction;
@@ -204,15 +199,15 @@ public class DatabaseManager {
 	 * 
 	 * 
 	 */
-	public List  getAttrValues(String attribute, String tableName) throws IOException, SQLException{
+	public List<Object>  getAttrValues(String attribute, String tableName) throws IOException, SQLException{
 		dataStore = (JDBCDataStore) DataStoreFinder.getDataStore(this.params);
 		Connection con = this.dataStore.getDataSource().getConnection();
 		// SQL befehl der Entweder alle Werte ausliefert, oder Wertebereich.
-		String distinct = "select distinct \""+attribute+"\" from "+tableName;
+		String distinct = "select distinct \""+attribute+"\" from \""+tableName+"\"";
 		ResultSet rs = con.prepareCall(distinct).executeQuery();
-		List layerClasses = new ArrayList();
+		List<Object> layerClasses = new ArrayList<Object>();
 		while(rs.next()){
-			layerClasses.add(rs.getObject(0));
+			layerClasses.add(rs.getObject(1));
 		}
 		if(layerClasses.size()<= 20 || attributes.get(attribute).contains("String")){
 			return layerClasses;

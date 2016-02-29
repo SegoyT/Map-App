@@ -102,6 +102,13 @@ html, body {
 				}
 			}
 		}
+		function setOpacity(layerName, opacity) {
+			for (var i = layers.length - 1; i >= 0; i--) {
+				if (layers[i].get('name') == layerName) {
+					layers[i].setOpacity(opacity / 100);
+				}
+			}
+		}
 	</script>
 
 
@@ -112,17 +119,23 @@ html, body {
 		<h:form id="layertable">
 			<p:dataTable var="layer" value="#{MapBean.layers}">
 				<p:column style="width : 20px">
-					<p:selectBooleanCheckbox value="#{layer.active}"
-						styleClass="#{layer.name}">
-						<f:ajax event="change" render="@form :layerupdate" />
+					<p:selectBooleanCheckbox value="#{layer.active}">
+						<f:ajax event="change" render="@form :layerupdate " />
 					</p:selectBooleanCheckbox>
 				</p:column>
 				<p:column>
-					<p:accordionPanel>
+					<p:accordionPanel id="accPan">
 						<p:tab title="#{layer.name}">
 							<h:outputText value="Opacity: " />
-							<p:slider for="opcty" />
-							<h:inputHidden id="opcty" value="0,5" />
+							<h:inputHidden id="opcty" value="#{layer.opacity}" />
+							<p:slider for="opcty">
+								<p:ajax event="slideEnd" process="opcty" update="opupdate"/>
+							</p:slider>
+						<p:panelGrid id="opupdate">
+							<h:outputScript>		
+							setOpacity("#{layer.name}", "#{layer.opacity}")
+					</h:outputScript>
+						</p:panelGrid>
 						</p:tab>
 					</p:accordionPanel>
 					<p:panelGrid id="layerupdate">
@@ -145,11 +158,12 @@ html, body {
 				<h:panelGrid columns="2" cellpadding="5" id="dialogBody">
 					<h:outputText value="#{MapBean.dialogMessage}" />
 					<p:inputText binding="#{input}" value="#{MapBean.epsg}" />
-					<h:outputText value="Fill: " />
-					<p:colorPicker value="#{MapBean.fill}" widgetVar="colorPicker" />
-					<h:outputText value="Dash Color: " />
-					<p:colorPicker value="#{MapBean.dashColor}"
-						widgetVar="colorPicker2" />
+					<h:outputText value="Symbol: " />
+					<p:selectOneMenu id="symbols" binding="#{symbol}">
+						<f:selectItem itemLabel="Circle" itemValue="circle" />
+						<f:selectItem itemLabel="Square" itemValue="square" />
+						<f:selectItem itemLabel="Star" itemValue="star" />
+					</p:selectOneMenu>
 					<h:outputText value="Attribute: " />
 					<p:selectOneMenu id="attributes" value="#{MapBean.styleAttr}">
 						<f:selectItem itemLabel="Select Attribute" itemValue=""
@@ -158,8 +172,8 @@ html, body {
 					</p:selectOneMenu>
 				</h:panelGrid>
 
-				<p:commandButton value="OK" 
-					action="#{MapBean.publish(input.value, 'circle')}"
+				<p:commandButton value="OK"
+					action="#{MapBean.publish(input.value, symbol.value)}"
 					update="add:addLayer layertable dialogBody" onclick="dialog.hide()" />
 
 
