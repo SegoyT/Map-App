@@ -44,7 +44,10 @@ public class MapBean {
 		System.out.println("INFORMATION: Server started!");
 		publisher = new GeoserverLayerPublisher();
 		for (String layer : publisher.getLayers()) {
-			layers.add(new Layer(layer, publisher.getAttributes(layer)));
+			System.out.println(layer);
+			layers.add(new Layer(layer, publisher.getAttributes(layer),
+					publisher.getGeom(layer)));
+			System.out.println(publisher.getGeom(layer));
 		}
 		System.out.println("INFORMATION: Existing Layers added");
 	}
@@ -75,28 +78,22 @@ public class MapBean {
 		}
 	}
 
+	/*
+  * 
+  * 
+  * 
+  */
 	public void publish(String epsg, String symbol) {
-		
+
 		System.out.println("Symbol: " + symbol);
 		if (epsg.length() > 3) {
 			publisher = new GeoserverLayerPublisher();
 			if (publisher.createLayer(dbm.getTableName(), "EPSG:" + epsg,
 					dbm.getminX(), dbm.getminY(), dbm.getmaxX(), dbm.getmaxY(),
 					dbm.getgeomType())) {
-				List<Object> styleValues;
-				try {
-					styleValues = dbm.getAttrValues(styleAttr,
-							dbm.getTableName());
-				} catch (IOException | SQLException e) {
-					System.err
-							.println("ERROR: Something wrong with Attribute, will continue with basic Style!");
-					styleValues = new ArrayList<>();
-					e.printStackTrace();
-				}
-				publisher.setStyle(dbm.getgeomType(), dbm.getTableName(),
-						symbol, styleAttr, styleValues);
+				setStyle(symbol, dbm.getTableName(), dbm.getgeomType());
 				layers.add(new Layer(dbm.getTableName(), publisher
-						.getAttributes(dbm.getTableName())));
+						.getAttributes(dbm.getTableName()), dbm.getgeomType()));
 				dialogMessage = "Layer published!";
 			} else {
 				try {
@@ -113,6 +110,30 @@ public class MapBean {
 			dialogMessage = "Could not publish Layer!";
 		}
 
+	}
+
+	private void setStyle(String symbol, String name, String geom) {
+		List<Object> styleValues;
+		try {
+			styleValues = dbm.getAttrValues(styleAttr, name);
+		} catch (IOException | SQLException e) {
+			System.err
+					.println("ERROR: Something wrong with Attribute, will continue with basic Style!");
+			styleValues = new ArrayList<>();
+			e.printStackTrace();
+		}
+		publisher.setStyle(geom, name, symbol, styleAttr, styleValues);
+	}
+
+	public void changeStyle(String layer) {
+		publisher = new GeoserverLayerPublisher();
+		String geom="";
+		for (Layer l : layers) {
+			if (l.getName().equals(layer)) {
+				geom = l.getGeometry();
+			}
+		}
+		setStyle("circle", layer, geom);
 	}
 
 	public Set<String> getAttributes() {

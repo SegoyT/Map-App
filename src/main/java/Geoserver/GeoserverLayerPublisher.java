@@ -35,10 +35,10 @@ public class GeoserverLayerPublisher {
 		this.fte = new GSFeatureTypeEncoder();
 		this.gsl = new GSLayerEncoder();
 		try {
-			this.reader = new GeoServerRESTReader(restUrl, restUser,
-					restPw);
+			this.reader = new GeoServerRESTReader(restUrl, restUser, restPw);
 		} catch (MalformedURLException e) {
-			System.err.println("ERROR: Could not initialize GeoserverRESTReader!");
+			System.err
+					.println("ERROR: Could not initialize GeoserverRESTReader!");
 			e.printStackTrace();
 		}
 	}
@@ -71,12 +71,13 @@ public class GeoserverLayerPublisher {
 		this.fte.setSRS(epsg);
 		this.fte.setNativeBoundingBox(minX, minY, maxX, maxY, epsg);
 
-		System.out.println("INFORMATION: Creating GeoServer layer " + layerName);
+		System.out
+				.println("INFORMATION: Creating GeoServer layer " + layerName);
 
 		boolean published = this.publisher.publishDBLayer("Postgis",
 				"Kartenapp", this.fte, this.gsl);
 
-//		setStyle(geomType, layerName, "circle", "101010", "999999");
+		// setStyle(geomType, layerName, "circle", "101010", "999999");
 
 		if (published) {
 			System.out.println("INFORMATION: Layer created!");
@@ -91,34 +92,34 @@ public class GeoserverLayerPublisher {
 	 * Löscht einen Layer aus dem Arbeitsbereich "Postgis"
 	 *
 	 * @param layer
-	 *            zu löschendes Layer
+	 *            zu löschender Layer
 	 */
 	public void deleteLayer(final String layer) {
 		System.out.println("INFORMATION: Removing GeoServer layer " + layer);
 		boolean deleted = this.publisher.removeLayer("Postgis", layer);
-		if (deleted){
-			System.out.println("INFORMATION: Layer "+layer+" deleted");
-		}
-		else if (!deleted){
-			System.out.println("ERROR: Deleting "+ layer+ " failed");
+		if (deleted) {
+			System.out.println("INFORMATION: Layer " + layer + " deleted");
+		} else if (!deleted) {
+			System.out.println("ERROR: Deleting " + layer + " failed");
 		}
 	}
 
-	public List<String> getLayers(){
+	public List<String> getLayers() {
 		List<String> layerList = new ArrayList<String>();
-		
+
 		RESTLayerList layers = reader.getLayers();
 		for (NameLinkElem layer : layers) {
 			layerList.add(layer.getName());
 		}
 		return layerList;
 	}
-	
-	public List<Attribute> getAttributes(String layer){
-		RESTFeatureType fType = reader.getFeatureType(reader.getLayer("Postgis", layer));
+
+	public List<Attribute> getAttributes(String layer) {
+		RESTFeatureType fType = reader.getFeatureType(reader.getLayer(
+				"Postgis", layer));
 		Iterator<Attribute> attrIter = fType.attributesIterator();
 		List<Attribute> attributes = new ArrayList<Attribute>();
-		while (attrIter.hasNext()){
+		while (attrIter.hasNext()) {
 			attributes.add(attrIter.next());
 		}
 		return attributes;
@@ -132,28 +133,42 @@ public class GeoserverLayerPublisher {
 	 * @param styleType
 	 *            Name des Layers/Stils
 	 */
-	public void setStyle(String styleType, String styleName, String symbol,String styleAttr, List<Object> styleValues) {
-		System.out.println("Setting GeoServer style on " + styleType+ " with Attribute "+styleAttr);
+	public void setStyle(String styleType, String styleName, String symbol,
+			String styleAttr, List<Object> styleValues) {
+		System.out.println("Setting GeoServer style on " + styleType
+				+ " with Attribute " + styleAttr);
 		String sld;
-		if (styleValues.isEmpty()){
-		sld = GeoserverStyleSet.doSimpleSLD(styleName, styleType,
-				"example", symbol, 6, 1);
-		}
-		else{
-			sld = GeoserverStyleSet.doComplexSLD(styleName, styleType, symbol, styleAttr, styleValues);
+		if (styleValues.isEmpty()) {
+			sld = GeoserverStyleSet.doSimpleSLD(styleName, styleType,
+					"example", symbol, 6, 1);
+		} else {
+			sld = GeoserverStyleSet.doComplexSLD(styleName, styleType, symbol,
+					styleAttr, styleValues);
 		}
 		boolean published = this.publisher.publishStyleInWorkspace("Postgis",
 				sld, styleName);
-		System.out.println("Layer published: " + published + "\n"+ sld);
+		System.out.println("Layer published: " + published + "\n" + sld);
 		if (published == false) {
 			this.publisher.removeStyleInWorkspace("Postgis", styleName);
 			published = this.publisher.publishStyleInWorkspace("Postgis", sld,
 					styleName);
-			System.out.println("Layer published: "+ published);
+			System.out.println("Layer published: " + published);
 		}
 		this.gsl.setDefaultStyle("Postgis:" + styleName);
 		boolean configured = this.publisher.configureLayer("Postgis",
 				styleName, this.gsl);
 		System.out.println("Layer Configured: " + configured);
+	}
+
+	public String getGeom(String layerName) {
+		String style = reader.getSLD("Postgis", layerName);
+		if (style.contains("PointSymbolizer")) {
+			return "Point";
+		} else if (style.contains("LineSymbolizer")) {
+			return "Line";
+		} else if (style.contains("PolygonSymbolizer")) {
+			return "Polygon";
+		}
+		return "";
 	}
 }

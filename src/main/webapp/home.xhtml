@@ -41,15 +41,35 @@ html, body {
 #layertable {
 	width: 100%;
 	float: right;
+	max-height: 600px;
+	overflow-y: scroll;
 }
 
 #fileupload {
 	float: right;
 	width: 100%;
+	font-size: 12px;
+}
+
+.hide-column-names table thead tr {
+	display: none;
+}
+
+#accPan {
+	font-size: 10em;
+	max-height: 700px;
+}
+
+#opctyGrid {
+	border-style: hidden;
+	outline-style: hidden;
+	outline-color: white;
+	table-layout:
 }
 </style>
 </h:head>
 <body>
+
 	<h:form id="map" class="map"></h:form>
 	<script src="../Kartenapp/js/ol.js"></script>
 	<script>
@@ -58,7 +78,6 @@ html, body {
 		});
 
 		var layers = [ osmLayer ];
-		// var storedLayers = {};
 
 		var map = new ol.Map({
 			target : 'map',
@@ -117,25 +136,40 @@ html, body {
 	<p:overlayPanel id="controlPanel" for="controlButton" hideEffect="fade"
 		dismissable="false">
 		<h:form id="layertable">
-			<p:dataTable var="layer" value="#{MapBean.layers}">
+			<p:dataTable var="layer" value="#{MapBean.layers}"
+				styleClass="hide-column-names">
 				<p:column style="width : 20px">
 					<p:selectBooleanCheckbox value="#{layer.active}">
-						<f:ajax event="change" render="@form :layerupdate " />
+						<f:ajax event="change" render="layerupdate " />
 					</p:selectBooleanCheckbox>
 				</p:column>
 				<p:column>
-					<p:accordionPanel id="accPan">
-						<p:tab title="#{layer.name}">
-							<h:outputText value="Opacity: " />
+					<p:accordionPanel id="accPan" styleClass="accPan"
+						activeIndex="null">
+						<p:tab title="#{layer.name}" titleStyle="font-size:12px">
 							<h:inputHidden id="opcty" value="#{layer.opacity}" />
-							<p:slider for="opcty">
-								<p:ajax event="slideEnd" process="opcty" update="opupdate"/>
+							<p:panelGrid id="opupdate" style="display:none">
+								<h:outputScript>		
+										setOpacity("#{layer.name}", "#{layer.opacity}")
+									</h:outputScript>
+							</p:panelGrid>
+							<h:outputLabel for="opcty" value="Opacity " />
+							<p:slider for="opcty" style="width:200px">
+								<p:ajax event="slideEnd" process="opcty" update="opupdate" />
 							</p:slider>
-						<p:panelGrid id="opupdate">
-							<h:outputScript>		
-							setOpacity("#{layer.name}", "#{layer.opacity}")
-					</h:outputScript>
-						</p:panelGrid>
+							<br/>
+							
+							
+								<h:outputText value="Set style on  " />
+								<p:selectOneMenu id="attributes" value="#{MapBean.styleAttr}" style="font-size:12px" ><<--onchange="TODO das hier machen!"-->>
+									<f:selectItem itemLabel="Select Attribute" itemValue=""
+										noSelectionOption="true" />
+									<f:selectItems value="#{layer.features}" />
+								</p:selectOneMenu>
+								<br/>
+								<h:graphicImage id="legend" title="Legend"
+									url="http://localhost:8082/geoserver/wms?REQUEST=GetLegendGraphic&amp;VERSION=1.0.0&amp;FORMAT=image/png&amp;WIDTH=20&amp;HEIGHT=20&amp;LAYER=Postgis:#{layer.name}">
+								</h:graphicImage>
 						</p:tab>
 					</p:accordionPanel>
 					<p:panelGrid id="layerupdate">
