@@ -1,23 +1,22 @@
 package servlet;
 
-import it.geosolutions.geoserver.rest.decoder.RESTFeatureType.Attribute;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class Layer {
 
 	private final String name;
-	private final List<Attribute> features;
+	private final Map<String,String> attributes;
 	private boolean active = true;
 	private int opacity = 30;
 	private String geometry;
 
 	
 
-	public Layer(String name, List<Attribute> fType,String geomType) {
+	public Layer(String name, Map<String, String> attrs,String geomType) {
 		this.name = name;
-		this.features = fType;
+		this.attributes = attrs;
 		this.geometry = geomType;
 	}
 	public String getGeometry() {
@@ -35,14 +34,11 @@ public class Layer {
 	public String getName() {
 		return name;
 	}
-	public List<String> getFeatures(){
-		List<String> attr = new ArrayList<String>();
-		
-		for (Attribute attribute:features){
-			String name = attribute.getName();
-			attr.add(name);
-		}
-		return attr;
+	public Map<String, String> getAttributes(){
+		return attributes;
+	}
+	public Set<String> getAttrKeys(){
+		return attributes.keySet();
 	}
 
 	public void setActive(boolean active) {

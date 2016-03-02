@@ -2,8 +2,10 @@ package Geoserver;
 
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import it.geosolutions.geoserver.rest.GeoServerRESTPublisher;
 import it.geosolutions.geoserver.rest.GeoServerRESTReader;
@@ -62,22 +64,21 @@ public class GeoserverLayerPublisher {
 	public boolean createLayer(final String layerName, final String epsg,
 			final double minX, final double minY, final double maxX,
 			final double maxY, final String geomType) {
-		this.fte.setName(layerName);
+		fte.setName(layerName);
 
 		System.out.println("INFORMATION: Setting Bounds on GeoServer for "
-				+ this.fte.getName() + ": " + epsg + " with " + minX + ", "
-				+ minY + ", " + maxX + ", " + maxY);
+				+ fte.getName() + ": " + epsg + " with " + minX + ", " + minY
+				+ ", " + maxX + ", " + maxY);
 
-		this.fte.setSRS(epsg);
-		this.fte.setNativeBoundingBox(minX, minY, maxX, maxY, epsg);
+		fte.setSRS(epsg);
+		fte.setNativeBoundingBox(minX, minY, maxX, maxY, epsg);
+		fte.setTitle(geomType);
 
 		System.out
 				.println("INFORMATION: Creating GeoServer layer " + layerName);
 
 		boolean published = this.publisher.publishDBLayer("Postgis",
-				"Kartenapp", this.fte, this.gsl);
-
-		// setStyle(geomType, layerName, "circle", "101010", "999999");
+				"Kartenapp", fte, gsl);
 
 		if (published) {
 			System.out.println("INFORMATION: Layer created!");
@@ -114,13 +115,14 @@ public class GeoserverLayerPublisher {
 		return layerList;
 	}
 
-	public List<Attribute> getAttributes(String layer) {
+	public Map<String, String> getAttributes(String layer) {
 		RESTFeatureType fType = reader.getFeatureType(reader.getLayer(
 				"Postgis", layer));
 		Iterator<Attribute> attrIter = fType.attributesIterator();
-		List<Attribute> attributes = new ArrayList<Attribute>();
+		Map<String, String> attributes = new HashMap<String, String>();
 		while (attrIter.hasNext()) {
-			attributes.add(attrIter.next());
+			Attribute attr = attrIter.next();
+			attributes.put(attr.getName(), attr.getBinding());
 		}
 		return attributes;
 	}
@@ -133,8 +135,10 @@ public class GeoserverLayerPublisher {
 	 * @param styleType
 	 *            Name des Layers/Stils
 	 */
-	public void setStyle(String styleType, String styleName, String symbol,
+	public void createStyle(String styleType, String tableName, String symbol,
 			String styleAttr, List<Object> styleValues) {
+
+		String styleName = tableName + "-" + styleAttr;
 		System.out.println("Setting GeoServer style on " + styleType
 				+ " with Attribute " + styleAttr);
 		String sld;
@@ -152,23 +156,26 @@ public class GeoserverLayerPublisher {
 			this.publisher.removeStyleInWorkspace("Postgis", styleName);
 			published = this.publisher.publishStyleInWorkspace("Postgis", sld,
 					styleName);
-			System.out.println("Layer published: " + published);
+			System.out.println("Style already exists: " + published);
 		}
+		setStyle(styleName, tableName);
+	}
+
+	public void setStyle(String styleName, String tableName) {
 		this.gsl.setDefaultStyle("Postgis:" + styleName);
 		boolean configured = this.publisher.configureLayer("Postgis",
-				styleName, this.gsl);
+				tableName, this.gsl);
 		System.out.println("Layer Configured: " + configured);
 	}
 
+	public boolean existsStyle(String styleName) {
+		return reader.existsStyle("Postgis", styleName);
+	}
+
+	//TODO: Geometrie richtig übergeben!!
 	public String getGeom(String layerName) {
-		String style = reader.getSLD("Postgis", layerName);
-		if (style.contains("PointSymbolizer")) {
-			return "Point";
-		} else if (style.contains("LineSymbolizer")) {
-			return "Line";
-		} else if (style.contains("PolygonSymbolizer")) {
-			return "Polygon";
-		}
-		return "";
+		System.out.println(reader.getLayer("Postgis", layerName).getTitle());
+		return reader.getLayer("Postgis", layerName).getTitle();
+
 	}
 }

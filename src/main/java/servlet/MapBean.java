@@ -114,6 +114,7 @@ public class MapBean {
 
 	private void setStyle(String symbol, String name, String geom) {
 		List<Object> styleValues;
+		
 		try {
 			styleValues = dbm.getAttrValues(styleAttr, name);
 		} catch (IOException | SQLException e) {
@@ -122,18 +123,25 @@ public class MapBean {
 			styleValues = new ArrayList<>();
 			e.printStackTrace();
 		}
-		publisher.setStyle(geom, name, symbol, styleAttr, styleValues);
+		publisher.createStyle(geom, name, symbol, styleAttr, styleValues);
 	}
 
 	public void changeStyle(String layer) {
 		publisher = new GeoserverLayerPublisher();
+		String styleName = layer+"-"+styleAttr;
+		if (publisher.existsStyle(styleName)){
+			publisher.setStyle(styleName, layer);
+		}
+		else{
 		String geom="";
 		for (Layer l : layers) {
 			if (l.getName().equals(layer)) {
 				geom = l.getGeometry();
+				dbm.setAttributes(l.getAttributes());
+				setStyle("circle", layer, geom);
+				break;
 			}
-		}
-		setStyle("circle", layer, geom);
+		}}
 	}
 
 	public Set<String> getAttributes() {

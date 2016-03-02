@@ -226,9 +226,9 @@ public class GeoserverStyleSet {
 	 * @param selectedAttr
 	 *            das shape Attribute mit den Klassen
 	 */
-	public static String doComplexSLD(String tableName, String styleType, String symbol,
+	public static String doComplexSLD(String name, String styleType, String symbol,
 			String attr, List<Object> attrClasses) {
-		final String styleName = tableName;
+		final String styleName = name;
 		// Oracle stores attribute names in upper case
 		final String attrName = attr.toUpperCase();
 		final String header = getHeaderSld(styleName);
@@ -240,24 +240,28 @@ public class GeoserverStyleSet {
 
 		// need to consider all added plus the tmp class
 
-		for (int i = 0; i < attrClasses.size(); i++) {
-			final String ruleHeader = getRuleHeaderSld(attrClasses.get(i)
-					.toString());
+		for (int i = 1; i < attrClasses.size(); i++) {
+			final String ruleHeader;
 			final String filter;
-			// TODO: neue Bedingung!!!!!!
-			if (attrClasses.size() != 10) {
+			if (attrClasses.get(0).equals("Einzelwerte")) {
+				 ruleHeader = getRuleHeaderSld(attrClasses.get(i)
+					.toString());
 				filter = getFilterEinzelwertSld(attrName, attrClasses.get(i)
 						.toString());
 			} else {
+				
 				if (i + 1 < attrClasses.size()) {
+					ruleHeader = getRuleHeaderSld(attrClasses.get(i).toString()+" to "+attrClasses.get(i+1).toString());
 					filter = getFilterBereicheSld(attrName, attrClasses.get(i)
 							.toString(), attrClasses.get(i + 1).toString());
 				} else {
-					filter = "";
+					ruleHeader = getRuleHeaderSld("Greater than "+attrClasses.get(i).toString());
+					filter = getFilterBereicheSld(attrName, attrClasses.get(i)
+							.toString(), attrClasses.get(2147483647).toString());
 				}
 			}
 
-			// TODO: für Body zufällige Farben symbolgröße anpassbar, usw
+			// TODO: für Body symbolgröße anpassbar, usw
 			final String body = getBodySld(styleType, symbol, 8, rdColor(),
 					rdColor(), 1);
 			final String ruleFooter = getRuleFooterSld();

@@ -88,7 +88,15 @@ html, body {
 				zoom : 6
 			})
 		});
-
+		
+		function updateLayer(layerName){
+			for (var i = layers.length - 1; i >= 0; i--) {
+				if (layers[i].get('name') == layerName) {
+					layers[i].getSource().updateParams({"time": Date.now()});
+				}
+		}
+		}
+		
 		function addGsLayer(layerName) {
 			//var layer = layerName;
 			var imgLayer = new ol.layer.Image({
@@ -141,7 +149,13 @@ html, body {
 				<p:column style="width : 20px">
 					<p:selectBooleanCheckbox value="#{layer.active}">
 						<f:ajax event="change" render="layerupdate " />
-					</p:selectBooleanCheckbox>
+
+					</p:selectBooleanCheckbox>			
+						<p:panelGrid id="layerupdate">
+							<h:outputScript>				
+									setLayerVisible("#{layer.name}", "#{layer.active}")
+							</h:outputScript>
+						</p:panelGrid>
 				</p:column>
 				<p:column>
 					<p:accordionPanel id="accPan" styleClass="accPan"
@@ -157,26 +171,31 @@ html, body {
 							<p:slider for="opcty" style="width:200px">
 								<p:ajax event="slideEnd" process="opcty" update="opupdate" />
 							</p:slider>
-							<br/>
-							
-							
-								<h:outputText value="Set style on  " />
-								<p:selectOneMenu id="attributes" value="#{MapBean.styleAttr}" style="font-size:12px" ><<--onchange="TODO das hier machen!"-->>
-									<f:selectItem itemLabel="Select Attribute" itemValue=""
-										noSelectionOption="true" />
-									<f:selectItems value="#{layer.features}" />
-								</p:selectOneMenu>
-								<br/>
-								<h:graphicImage id="legend" title="Legend"
-									url="http://localhost:8082/geoserver/wms?REQUEST=GetLegendGraphic&amp;VERSION=1.0.0&amp;FORMAT=image/png&amp;WIDTH=20&amp;HEIGHT=20&amp;LAYER=Postgis:#{layer.name}">
-								</h:graphicImage>
+							<br />
+
+
+							<h:outputText value="Set style on  " />
+							<p:selectOneMenu id="attributes" value="#{MapBean.styleAttr}"
+								style="font-size:12px">
+								<p:ajax event="change"
+									listener="#{MapBean.changeStyle(layer.name)}"  update="styleUpdate legend accPan" />
+								<f:selectItem itemLabel="Select Attribute" itemValue=""
+									noSelectionOption="true" />
+								<f:selectItems value="#{layer.getAttrKeys()}" />
+							</p:selectOneMenu>
+							<p:panelGrid id= "styleUpdate">
+							<h:outputScript>
+								updateLayer("#{layer.name}")
+							</h:outputScript>
+							</p:panelGrid>
+							<br />
+							<p:panelGrid id="legend">
+							<p:graphicImage title="Legend" cache="false" 
+								url="http://localhost:8082/geoserver/wms?REQUEST=GetLegendGraphic&amp;VERSION=1.0.0&amp;FORMAT=image/png&amp;WIDTH=20&amp;HEIGHT=20&amp;LAYER=Postgis:#{layer.name}">
+							</p:graphicImage>
+							</p:panelGrid>
 						</p:tab>
 					</p:accordionPanel>
-					<p:panelGrid id="layerupdate">
-						<h:outputScript>				
-					setLayerVisible("#{layer.name}", "#{layer.active}")
-		</h:outputScript>
-					</p:panelGrid>
 				</p:column>
 			</p:dataTable>
 		</h:form>

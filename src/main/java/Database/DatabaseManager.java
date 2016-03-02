@@ -37,6 +37,7 @@ public class DatabaseManager {
 	private String geometryType;
 	private String tName;
 	private Map<String, String> attributes = new HashMap<String,String>();
+
 	private boolean uploaded;
 
 	public DatabaseManager() {
@@ -95,6 +96,7 @@ public class DatabaseManager {
 
 				try {
 					writeFeaturesToDB(fileImport.getCollection(), name);
+					dataStore.dispose();
 				} catch (Exception e) {
 					System.err.println("ERROR: Database Schema " + name
 							+ " already exists. Please try another File.");
@@ -198,6 +200,7 @@ public class DatabaseManager {
 	 *			the table the query is applied to
 	 * 
 	 * 
+	 * attributes muss vorher richtig gesetzt werden!
 	 */
 	public List<Object>  getAttrValues(String attribute, String tableName) throws IOException, SQLException{
 		dataStore = (JDBCDataStore) DataStoreFinder.getDataStore(this.params);
@@ -206,6 +209,7 @@ public class DatabaseManager {
 		String distinct = "select distinct \""+attribute+"\" from \""+tableName+"\"";
 		ResultSet rs = con.prepareCall(distinct).executeQuery();
 		List<Object> layerClasses = new ArrayList<Object>();
+		layerClasses.add("Einzelwerte");
 		while(rs.next()){
 			layerClasses.add(rs.getObject(1));
 		}
@@ -214,15 +218,15 @@ public class DatabaseManager {
 		}
 		//TODO: abfragen ob Werte tatsächlich Nummern sind.
 		else{
-			String minmax = "select min(\""+attribute+"\") as min_id, max(\""+attribute+"\") as max_id from "+tableName;
+			String minmax = "select min(\""+attribute+"\") as min_id, max(\""+attribute+"\") as max_id from \""+tableName+"\"";
 			ResultSet mm = con.prepareCall(minmax).executeQuery();
 			mm.next();
 			double min = mm.getFloat("min_id");
 			double max = mm.getFloat("max_id");
 			double step = (max-min)/10;
 			layerClasses.clear();
-			layerClasses.add(min);
-			for(double i =min ;i<max; i+=step){
+			layerClasses.add("Bereiche");
+			for(double i =min ;i<=max; i+=step){
 				layerClasses.add(i);
 			}
 			return layerClasses;
@@ -230,6 +234,9 @@ public class DatabaseManager {
 
 		}
 		
+	}
+	public void setAttributes(Map<String, String> attributes) {
+		this.attributes = attributes;
 	}
 
 	public Map<String, String> getAttributes() {
