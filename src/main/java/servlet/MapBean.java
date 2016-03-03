@@ -46,7 +46,7 @@ public class MapBean {
 		for (String layer : publisher.getLayers()) {
 			System.out.println(layer);
 			layers.add(new Layer(layer, publisher.getAttributes(layer),
-					publisher.getGeom(layer)));
+					publisher.getGeom(layer),publisher.getActiveAttr(layer)));
 			System.out.println(publisher.getGeom(layer));
 		}
 		System.out.println("INFORMATION: Existing Layers added");
@@ -93,7 +93,7 @@ public class MapBean {
 					dbm.getgeomType())) {
 				setStyle(symbol, dbm.getTableName(), dbm.getgeomType());
 				layers.add(new Layer(dbm.getTableName(), publisher
-						.getAttributes(dbm.getTableName()), dbm.getgeomType()));
+						.getAttributes(dbm.getTableName()), dbm.getgeomType(), styleAttr));
 				dialogMessage = "Layer published!";
 			} else {
 				try {

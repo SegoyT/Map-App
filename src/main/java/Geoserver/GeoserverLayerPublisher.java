@@ -11,18 +11,22 @@ import it.geosolutions.geoserver.rest.GeoServerRESTPublisher;
 import it.geosolutions.geoserver.rest.GeoServerRESTReader;
 import it.geosolutions.geoserver.rest.decoder.RESTFeatureType;
 import it.geosolutions.geoserver.rest.decoder.RESTFeatureType.Attribute;
+import it.geosolutions.geoserver.rest.decoder.RESTLayer;
 import it.geosolutions.geoserver.rest.decoder.RESTLayerList;
 import it.geosolutions.geoserver.rest.decoder.utils.NameLinkElem;
 import it.geosolutions.geoserver.rest.encoder.GSLayerEncoder;
 import it.geosolutions.geoserver.rest.encoder.feature.GSFeatureTypeEncoder;
 
 public class GeoserverLayerPublisher {
+	
 
 	private final String restUrl = "http://localhost:8082/geoserver";
 	private final String restUser = "admin";
 	private final String restPw = "geoserver";
 	private final GSFeatureTypeEncoder fte;
 	private GeoServerRESTReader reader;
+	
+
 
 	private final GSLayerEncoder gsl;
 
@@ -116,8 +120,9 @@ public class GeoserverLayerPublisher {
 	}
 
 	public Map<String, String> getAttributes(String layer) {
-		RESTFeatureType fType = reader.getFeatureType(reader.getLayer(
-				"Postgis", layer));
+		RESTLayer gsLayer = reader.getLayer(
+				"Postgis", layer);
+		RESTFeatureType fType = reader.getFeatureType(gsLayer);
 		Iterator<Attribute> attrIter = fType.attributesIterator();
 		Map<String, String> attributes = new HashMap<String, String>();
 		while (attrIter.hasNext()) {
@@ -133,7 +138,7 @@ public class GeoserverLayerPublisher {
 	 * @param sldStyle
 	 *            zu setzeneder Stil SLD Datei als String
 	 * @param styleType
-	 *            Name des Layers/Stils
+	 *            Name des Stils
 	 */
 	public void createStyle(String styleType, String tableName, String symbol,
 			String styleAttr, List<Object> styleValues) {
@@ -144,7 +149,7 @@ public class GeoserverLayerPublisher {
 		String sld;
 		if (styleValues.isEmpty()) {
 			sld = GeoserverStyleSet.doSimpleSLD(styleName, styleType,
-					"example", symbol, 6, 1);
+					"Attribute Values not readable", symbol, 6, 1);
 		} else {
 			sld = GeoserverStyleSet.doComplexSLD(styleName, styleType, symbol,
 					styleAttr, styleValues);
@@ -174,8 +179,20 @@ public class GeoserverLayerPublisher {
 
 	//TODO: Geometrie richtig übergeben!!
 	public String getGeom(String layerName) {
-		System.out.println(reader.getLayer("Postgis", layerName).getTitle());
-		return reader.getLayer("Postgis", layerName).getTitle();
-
+		String sld = reader.getSLD("Postgis", reader.getLayer("Postgis", layerName).getDefaultStyle());
+		if (sld.contains("PointSymbolizer")){
+			return "Point";
+		}
+		else if (sld.contains("LineSymbolizer")){
+			return "Line";
+		}
+		else {
+			return "Polygon";
+		}
+	}
+	public String getActiveAttr(String layerName){
+		String style = reader.getLayer("Postgis", layerName).getDefaultStyle();
+		String attr = style.replace(layerName+"-", "");
+		return attr;
 	}
 }

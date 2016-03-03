@@ -179,7 +179,7 @@ html, body {
 								style="font-size:12px">
 								<p:ajax event="change"
 									listener="#{MapBean.changeStyle(layer.name)}"  update="styleUpdate legend accPan" />
-								<f:selectItem itemLabel="Select Attribute" itemValue=""
+								<f:selectItem itemLabel="#{layer.activeAttr}" itemValue=""
 									noSelectionOption="true" />
 								<f:selectItems value="#{layer.getAttrKeys()}" />
 							</p:selectOneMenu>

@@ -257,7 +257,7 @@ public class GeoserverStyleSet {
 				} else {
 					ruleHeader = getRuleHeaderSld("Greater than "+attrClasses.get(i).toString());
 					filter = getFilterBereicheSld(attrName, attrClasses.get(i)
-							.toString(), attrClasses.get(2147483647).toString());
+							.toString(), "2147483646");
 				}
 			}
 

@@ -13,7 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 import org.geotools.data.DataStoreFinder;
 import org.geotools.data.DefaultTransaction;
 import org.geotools.data.Transaction;
@@ -36,7 +35,7 @@ public class DatabaseManager {
 	private double maxY;
 	private String geometryType;
 	private String tName;
-	private Map<String, String> attributes = new HashMap<String,String>();
+	private Map<String, String> attributes = new HashMap<String, String>();
 
 	private boolean uploaded;
 
@@ -169,10 +168,11 @@ public class DatabaseManager {
 						.getAttributeDescriptors()) {
 					String feature = dbAttribute.getLocalName();
 					if (dbAttribute.getType() != null) {
-						String type = dbAttribute.getType().getBinding().getName();
+						String type = dbAttribute.getType().getBinding()
+								.getName();
 						attributes.put(feature, type);
 
-						System.out.println(feature + "   " + type );
+						System.out.println(feature + "   " + type);
 					}
 				}
 
@@ -190,51 +190,72 @@ public class DatabaseManager {
 		}
 
 	}
-	/*Gets all distinct Values of one Attribute of a table counts them
-	 *returns either a List of all Distinct values or a List with steps between the minimum and maximum values
-	 *
-	 *@param attribute
-	 *			the attribute
-	 *
-	 *@param tableName
-	 *			the table the query is applied to
+
+	/*
+	 * Gets all distinct Values of one Attribute of a table counts themreturns
+	 * either a List of all Distinct values or a List with steps between the
+	 * minimum and maximum values
+	 * 
+	 * @param attribute the attribute
+	 * 
+	 * @param tableName the table the query is applied to
 	 * 
 	 * 
 	 * attributes muss vorher richtig gesetzt werden!
 	 */
-	public List<Object>  getAttrValues(String attribute, String tableName) throws IOException, SQLException{
+	public List<Object> getAttrValues(String attribute, String tableName)
+			throws IOException, SQLException {
 		dataStore = (JDBCDataStore) DataStoreFinder.getDataStore(this.params);
 		Connection con = this.dataStore.getDataSource().getConnection();
 		// SQL befehl der Entweder alle Werte ausliefert, oder Wertebereich.
-		String distinct = "select distinct \""+attribute+"\" from \""+tableName+"\"";
+		String distinct = "select distinct \"" + attribute + "\" from \""
+				+ tableName + "\"";
 		ResultSet rs = con.prepareCall(distinct).executeQuery();
 		List<Object> layerClasses = new ArrayList<Object>();
 		layerClasses.add("Einzelwerte");
-		while(rs.next()){
+		while (rs.next()) {
 			layerClasses.add(rs.getObject(1));
 		}
-		if(layerClasses.size()<= 20 || attributes.get(attribute).contains("String")){
+		if (layerClasses.size() <= 20
+				|| attributes.get(attribute).contains("String")) {
 			return layerClasses;
 		}
-		//TODO: abfragen ob Werte tatsächlich Nummern sind.
-		else{
-			String minmax = "select min(\""+attribute+"\") as min_id, max(\""+attribute+"\") as max_id from \""+tableName+"\"";
+		// TODO: abfragen ob Werte tatsächlich Nummern sind.
+		else {
+			String minmax = "select min(\"" + attribute + "\") as min, avg(\""
+					+ attribute + "\") as avg, STDDEV(\"" + attribute
+					+ "\") as std from \"" + tableName + "\"";
 			ResultSet mm = con.prepareCall(minmax).executeQuery();
 			mm.next();
-			double min = mm.getFloat("min_id");
-			double max = mm.getFloat("max_id");
-			double step = (max-min)/10;
+			double avg = mm.getFloat("avg");
+			double std = mm.getFloat("std");
+			double min = mm.getFloat("min");
+			double step = std / 5;
 			layerClasses.clear();
 			layerClasses.add("Bereiche");
-			for(double i =min ;i<=max; i+=step){
-				layerClasses.add(i);
+			if (min >= 0) {
+				if (avg - std >= 0) {
+					for(double i = (avg-std);i<=(avg+std);i+=step){
+						layerClasses.add(Math.round(i));
+				}
+					}
+				else if (avg - std < 0){
+					for (double i=0;i<=std*2;i+=step){
+						layerClasses.add(Math.round(i));
+					}
+				}
+			}
+			else{
+				for(double i = (avg-std);i<=(avg+std);i+=step){
+					layerClasses.add(Math.round(i));
+				}
 			}
 			return layerClasses;
-			
 
 		}
-		
+
 	}
+
 	public void setAttributes(Map<String, String> attributes) {
 		this.attributes = attributes;
 	}
