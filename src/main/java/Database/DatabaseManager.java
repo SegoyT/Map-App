@@ -78,6 +78,8 @@ public class DatabaseManager {
 			this.tName = name;
 		} else if (name.endsWith(".geojson")) {
 			fileImport = new GeoJSONImporter();
+			name = name.replace(".geojson", "");
+			this.tName = name;
 		} else if (name.endsWith(".xml")) {
 			fileImport = null;
 		} else {

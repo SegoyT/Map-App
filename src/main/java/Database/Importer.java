@@ -16,7 +16,7 @@ public interface Importer {
 	
 	public FeatureCollection<SimpleFeatureType, SimpleFeature> getCollection();
 	
-	public FeatureCollection<SimpleFeatureType, SimpleFeature> readfile(String tablename, File file)throws IOException;
+	public FeatureCollection<SimpleFeatureType, SimpleFeature> readFile(String tablename, File file)throws IOException;
 	
 	public String getEpsg();
 	public String getGeomType();

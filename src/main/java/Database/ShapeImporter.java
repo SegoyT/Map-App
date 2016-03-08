@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,14 +37,14 @@ public class ShapeImporter implements Importer {
 
 	private String epsg;
 
-	private String tablename;
+	private String tableName;
 	private FeatureCollection<SimpleFeatureType, SimpleFeature> dbCollection;
 
-	private String geomtype;
+	private String geomType;
 
 	public void setFile(File file, String name) {
 		this.uploadFile = file;
-		this.tablename = name;
+		this.tableName = name;
 	}
 
 	public void handleFile() {
@@ -91,7 +90,7 @@ public class ShapeImporter implements Importer {
 			}
 
 			// read
-			this.dbCollection = readfile(this.tablename, shpFile);
+			this.dbCollection = readFile(tableName, shpFile);
 			tmpDir.delete();
 			inputstream.close();
 
@@ -108,7 +107,7 @@ public class ShapeImporter implements Importer {
 		return this.dbCollection;
 	}
 
-	public FeatureCollection<SimpleFeatureType, SimpleFeature> readfile(
+	public FeatureCollection<SimpleFeatureType, SimpleFeature> readFile(
 			String tableName, File file) throws IOException {
 		final FileDataStore shpDataStore = FileDataStoreFinder
 				.getDataStore(file);
@@ -119,14 +118,14 @@ public class ShapeImporter implements Importer {
 		final FeatureCollection<SimpleFeatureType, SimpleFeature> shpCollection = shpSource
 				.getFeatures();
 
-		// Create Oracle Table, store Attr Name and Type
+		// Create Table, store Attr Name and Type
 		this.shapeAttrs = new ArrayList<Entry<String, String>>();
 		final SimpleFeatureTypeBuilder dbSftBuilder = new SimpleFeatureTypeBuilder();
 		dbSftBuilder.setName(new NameImpl(tableName));
 		final List<AttributeDescriptor> ads = shpSchema
 				.getAttributeDescriptors();
 		for (final AttributeDescriptor ad : ads) {
-			// add to list for Gestaltung
+		
 			final String n = ad.getName().toString();
 			final String typ = ad.getType().getBinding().getSimpleName();
 			final Entry<String, String> attr = new SimpleEntry<String, String>(
@@ -140,6 +139,7 @@ public class ShapeImporter implements Importer {
 					ad.isNillable(), ad.getDefaultValue());
 			dbSftBuilder.add(t);
 		}
+		// TODO: EPSG, wenn nicht automatisch erstellt wird übergeben lassen.
 		try {
 			String prj = shpSchema.getCoordinateReferenceSystem().toString();
 			this.epsg = Prj2Epsg.getEpsg(prj);
@@ -148,13 +148,12 @@ public class ShapeImporter implements Importer {
 			this.epsg = prj;
 		}
 		System.out.println("Epsg:  " + this.epsg);
-		this.geomtype = shpSchema.getGeometryDescriptor().getType().getName()
+		this.geomType = shpSchema.getGeometryDescriptor().getType().getName()
 				.getLocalPart();
 
 		final SimpleFeatureType dbSchema = dbSftBuilder.buildFeatureType();
 
-		// Convert Shape Attributes to upper case because Oracle only supports
-		// upper case
+		// Convert Shape Attributes to upper case 
 		try (FeatureIterator<SimpleFeature> shpFeatures = shpCollection
 				.features()) {
 			while (shpFeatures.hasNext()) {
@@ -184,7 +183,7 @@ public class ShapeImporter implements Importer {
 	}
 
 	public String getGeomType() {
-		return this.geomtype;
+		return this.geomType;
 	}
 
 }

@@ -12,13 +12,13 @@ public class GeoserverStyleSet {
 			final int durchmesser, final String fuellfarbe,
 			final String strichfarbe, final int strichstaerke) {
 		String bodySld = "";
-		if (styleType.equals("Point")) {
+		if (styleType.contains("Point")) {
 			bodySld = getPointSld(symbol, durchmesser, fuellfarbe);
 		} else if (styleType.contains("Line")) {
 			bodySld = getLineSld(strichfarbe, strichstaerke);
 
-		} else if (styleType.equals("Polygon")
-				|| styleType.equals("MultiPolygon")) {
+		} else if (styleType.contains("Polygon")
+				|| styleType.contains("MultiPolygon")) {
 			bodySld = getPolygonSld(fuellfarbe, strichfarbe, strichstaerke);
 		}
 
