@@ -4,19 +4,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.geotools.data.FileDataStore;
-import org.geotools.data.FileDataStoreFinder;
 import org.geotools.data.collection.ListFeatureCollection;
-import org.geotools.data.shapefile.ShapefileDataStoreFactory;
-import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.feature.NameImpl;
@@ -30,13 +26,18 @@ import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.feature.type.AttributeDescriptor;
 import org.opengis.feature.type.Name;
 
+import com.vividsolutions.jts.geom.MultiPolygon;
+import com.vividsolutions.jts.geom.Polygon;
+import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.geom.LineString;
+
 import Geoserver.Prj2Epsg;
 
 public class GeoJSONImporter implements Importer {
 
 	private File uploadFile;
 	private String tableName;
-	private FeatureCollection<SimpleFeatureType, SimpleFeature> dbCollection;
+	private Collection<FeatureCollection<SimpleFeatureType, SimpleFeature>> dbCollection = new HashSet<FeatureCollection<SimpleFeatureType, SimpleFeature>>();
 	private String epsg;
 	private String geomType;
 	private List<Entry<String, String>> shapeAttrs;
@@ -49,23 +50,30 @@ public class GeoJSONImporter implements Importer {
 	}
 
 	@Override
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see Database.Importer#handleFile()
+	 */
 	public void handleFile() {
 		try {
 			if (uploadFile == null) {
 				throw new IllegalArgumentException(
 						"No File: Please provide a File");
 			}
-
-			dbCollection = readFile(tableName, uploadFile);
-
+			readFile(tableName, uploadFile);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 	}
 
 	@Override
-	public FeatureCollection<SimpleFeatureType, SimpleFeature> getCollection() {
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see Database.Importer#getCollection()
+	 */
+	public Collection<FeatureCollection<SimpleFeatureType, SimpleFeature>> getCollection() {
 		return this.dbCollection;
 	}
 
@@ -73,31 +81,25 @@ public class GeoJSONImporter implements Importer {
 	 * Alte methode versuch wie shapefile zu importieren. könnte teilweise noch
 	 * hilfreich sein <- war doch richtig..
 	 */
-	public FeatureCollection<SimpleFeatureType, SimpleFeature> readFile(
-			String tableName, File file) throws IOException {
+	public void readFile(String tableName, File file) throws IOException {
 
 		final InputStream inputstream = new FileInputStream(file);
-		GeometryJSON gjson = new GeometryJSON();
+		GeometryJSON gjson = new GeometryJSON(15);
 		FeatureJSON fjson = new FeatureJSON(gjson);
-		
-//		System.out.println(fjson.readCRS(inputstream));
-		
+
+		// System.out.println(fjson.readCRS(inputstream));
+
 		FeatureCollection<SimpleFeatureType, SimpleFeature> jfc = fjson
 				.readFeatureCollection(inputstream);
 
 		final SimpleFeatureType jsonSchema = jfc.getSchema();
-		final List<SimpleFeature> featureList = new ArrayList<SimpleFeature>();
 
 		final SimpleFeatureTypeBuilder dbSftBuilder = new SimpleFeatureTypeBuilder();
-		dbSftBuilder.setName(new NameImpl(tableName));
 		final List<AttributeDescriptor> ads = jsonSchema
 				.getAttributeDescriptors();
 		for (final AttributeDescriptor ad : ads) {
 
 			final String n = ad.getName().toString();
-			// final String typ = ad.getType().getBinding().getSimpleName();
-			// final Entry<String, String> attr = new SimpleEntry<String,
-			// String>(n, typ);
 
 			final Name name = new NameImpl(n.toUpperCase());
 			final AttributeDescriptor t = new AttributeDescriptorImpl(
@@ -105,35 +107,74 @@ public class GeoJSONImporter implements Importer {
 					ad.isNillable(), ad.getDefaultValue());
 			dbSftBuilder.add(t);
 		}
-		// TODO: EPSG, wenn nicht automatisch erstellt wird übergeben lassen.
-		String prj = "";
-		this.epsg = prj;
+		// TODO: EPSG!!
+		this.epsg = "";
 
 		this.geomType = jsonSchema.getGeometryDescriptor().getType()
 				.getBinding().getName();
 
-		final SimpleFeatureType dbSchema = dbSftBuilder.buildFeatureType();
-		System.out.println(dbSchema.getName());
+		// Getting Geomtries and Attributes right
+		try (FeatureIterator<SimpleFeature> jsonFeatures = jfc.features()) {
+			Map<Class, List<SimpleFeature>> classMap = new HashMap<Class, List<SimpleFeature>>();
+			classMap.put(Polygon.class, new ArrayList<SimpleFeature>());
+			classMap.put(MultiPolygon.class, new ArrayList<SimpleFeature>());
+			classMap.put(LineString.class, new ArrayList<SimpleFeature>());
+			classMap.put(Point.class, new ArrayList<SimpleFeature>());
 
-		try (FeatureIterator<SimpleFeature> shpFeatures = jfc.features()) {
-			while (shpFeatures.hasNext()) {
-				final SimpleFeature sf = shpFeatures.next();
-				final SimpleFeatureBuilder dbSfBuilder = new SimpleFeatureBuilder(
-						dbSchema);
-				for (final AttributeDescriptor ad : jsonSchema
-						.getAttributeDescriptors()) {
-					final String attr = ad.getLocalName();
-					final String name = attr.toUpperCase();
-					final Object obj = sf.getAttribute(attr);
-					dbSfBuilder.set(name, obj);
+			// Hässlichster Code den ich je gesehen habe.
+			SimpleFeatureTypeBuilder pointS = dbSftBuilder;
+			SimpleFeatureTypeBuilder polyS = dbSftBuilder;
+			SimpleFeatureTypeBuilder mPolyS = dbSftBuilder;
+			SimpleFeatureTypeBuilder lineS = dbSftBuilder;
+			pointS.setName(new NameImpl(tableName + ":Polygon"));
+			polyS.setName(new NameImpl(tableName + ":MultiPolygon"));
+			mPolyS.setName(new NameImpl(tableName + ":LineString"));
+			lineS.setName(new NameImpl(tableName + ":Point"));
+			
+			
+			final SimpleFeatureType poi = pointS.buildFeatureType();
+			final SimpleFeatureType pol = polyS.buildFeatureType();
+			final SimpleFeatureType mPo = mPolyS.buildFeatureType();
+			final SimpleFeatureType lin = lineS.buildFeatureType();
+
+			while (jsonFeatures.hasNext()) {
+				final SimpleFeature sf = jsonFeatures.next();
+				String foo = sf.getDefaultGeometry().getClass().getName();
+
+				SimpleFeatureBuilder dbSfBuilder;
+				if (foo.contains("MultiPolygon")) { dbSfBuilder = new SimpleFeatureBuilder(
+							mPo);
+				} else if (foo.contains("Point")) {
+				 dbSfBuilder = new SimpleFeatureBuilder(
+							poi);
+				} else if (foo.contains("LineString")) {
+					 dbSfBuilder = new SimpleFeatureBuilder(
+							lin);
+				} else {
+					dbSfBuilder = new SimpleFeatureBuilder(
+							pol);
+
+					for (final AttributeDescriptor ad : jsonSchema
+							.getAttributeDescriptors()) {
+
+						final String attr = ad.getLocalName();
+						final String name = attr.toUpperCase();
+						Object obj = sf.getAttribute(attr);
+						dbSfBuilder.set(name, obj);
+
+					}
+					final SimpleFeature of = dbSfBuilder.buildFeature(null);
+					classMap.get(sf.getDefaultGeometry().getClass()).add(of);
 				}
-				final SimpleFeature of = dbSfBuilder.buildFeature(null);
-				featureList.add(of);
+			}
+			for (List<SimpleFeature> list : classMap.values()) {
+				if (list.size() > 0) {
+					FeatureCollection<SimpleFeatureType, SimpleFeature> collection = new ListFeatureCollection(
+						pol	, list);
+					dbCollection.add(collection);
+				}
 			}
 		}
-		final FeatureCollection<SimpleFeatureType, SimpleFeature> dbCollection = new ListFeatureCollection(
-				dbSchema, featureList);
-		return dbCollection;
 	}
 
 	@Override

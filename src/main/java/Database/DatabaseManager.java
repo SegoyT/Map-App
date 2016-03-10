@@ -96,11 +96,13 @@ public class DatabaseManager {
 				this.geometryType = fileImport.getGeomType();
 
 				try {
-					writeFeaturesToDB(fileImport.getCollection(), name);
+					for(FeatureCollection<SimpleFeatureType, SimpleFeature> fColl:fileImport.getCollection() ){
+					writeFeaturesToDB(fColl, name+":"+fColl.size());
+					}
 					dataStore.dispose();
 				} catch (Exception e) {
-					System.err.println("ERROR: Database Schema " + name
-							+ " already exists. Please try another File.");
+					System.err.println("ERROR:"+ name
+							+ " could not be uploaded. Please try another File.");
 					e.printStackTrace();
 					dataStore.dispose();
 				}

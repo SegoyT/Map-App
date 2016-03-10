@@ -73,7 +73,7 @@ public class MapBean {
 				dialogMessage = "Epsg was found: ";
 			}
 		} else {
-			dialogMessage = "Error, File already exists in database!";
+			dialogMessage = "Error, File was not comitted to Database!";
 			setEpsg("");
 		}
 	}

@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.zip.ZipEntry;
@@ -38,7 +39,7 @@ public class ShapeImporter implements Importer {
 	private String epsg;
 
 	private String tableName;
-	private FeatureCollection<SimpleFeatureType, SimpleFeature> dbCollection;
+	private Collection<FeatureCollection<SimpleFeatureType, SimpleFeature>> dbCollection;
 
 	private String geomType;
 
@@ -90,7 +91,7 @@ public class ShapeImporter implements Importer {
 			}
 
 			// read
-			this.dbCollection = readFile(tableName, shpFile);
+			readFile(tableName, shpFile);
 			tmpDir.delete();
 			inputstream.close();
 
@@ -103,11 +104,11 @@ public class ShapeImporter implements Importer {
 
 	}
 
-	public FeatureCollection<SimpleFeatureType, SimpleFeature> getCollection() {
+	public Collection<FeatureCollection<SimpleFeatureType, SimpleFeature>> getCollection() {
 		return this.dbCollection;
 	}
 
-	public FeatureCollection<SimpleFeatureType, SimpleFeature> readFile(
+	public void readFile(
 			String tableName, File file) throws IOException {
 		final FileDataStore shpDataStore = FileDataStoreFinder
 				.getDataStore(file);
@@ -171,10 +172,10 @@ public class ShapeImporter implements Importer {
 				featureList.add(of);
 			}
 		}
-		final FeatureCollection<SimpleFeatureType, SimpleFeature> dbCollection = new ListFeatureCollection(
+		final FeatureCollection<SimpleFeatureType, SimpleFeature> fCollection = new ListFeatureCollection(
 				dbSchema, featureList);
 		shpDataStore.dispose();
-		return dbCollection;
+		dbCollection.add(fCollection);
 
 	}
 
