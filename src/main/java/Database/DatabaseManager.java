@@ -80,8 +80,10 @@ public class DatabaseManager {
 			fileImport = new GeoJSONImporter();
 			name = name.replace(".geojson", "");
 			this.tName = name;
-		} else if (name.endsWith(".xml")) {
-			fileImport = null;
+		} else if (name.endsWith(".gml") || (name.endsWith(".xml"))) {
+			fileImport = new XmlImporter();
+			name = name.replace(".gml", "").replace(".xml", "");
+			this.tName = name;
 		} else {
 			fileImport = null;
 			this.tName = name;
@@ -96,9 +98,8 @@ public class DatabaseManager {
 				this.geometryType = fileImport.getGeomType();
 
 				try {
-					for(FeatureCollection<SimpleFeatureType, SimpleFeature> fColl:fileImport.getCollection() ){
-					writeFeaturesToDB(fColl, name+":"+fColl.size());
-					}
+					FeatureCollection<SimpleFeatureType, SimpleFeature> fColl=fileImport.getCollection();
+					writeFeaturesToDB(fColl, name);
 					dataStore.dispose();
 				} catch (Exception e) {
 					System.err.println("ERROR:"+ name

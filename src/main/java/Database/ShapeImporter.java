@@ -4,11 +4,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -34,12 +31,12 @@ public class ShapeImporter implements Importer {
 
 	private File uploadFile;
 
-	private List<Entry<String, String>> shapeAttrs;
+	
 
 	private String epsg;
 
 	private String tableName;
-	private Collection<FeatureCollection<SimpleFeatureType, SimpleFeature>> dbCollection;
+	private FeatureCollection<SimpleFeatureType, SimpleFeature> dbCollection;
 
 	private String geomType;
 
@@ -104,7 +101,7 @@ public class ShapeImporter implements Importer {
 
 	}
 
-	public Collection<FeatureCollection<SimpleFeatureType, SimpleFeature>> getCollection() {
+	public FeatureCollection<SimpleFeatureType, SimpleFeature> getCollection() {
 		return this.dbCollection;
 	}
 
@@ -120,7 +117,6 @@ public class ShapeImporter implements Importer {
 				.getFeatures();
 
 		// Create Table, store Attr Name and Type
-		this.shapeAttrs = new ArrayList<Entry<String, String>>();
 		final SimpleFeatureTypeBuilder dbSftBuilder = new SimpleFeatureTypeBuilder();
 		dbSftBuilder.setName(new NameImpl(tableName));
 		final List<AttributeDescriptor> ads = shpSchema
@@ -128,10 +124,7 @@ public class ShapeImporter implements Importer {
 		for (final AttributeDescriptor ad : ads) {
 		
 			final String n = ad.getName().toString();
-			final String typ = ad.getType().getBinding().getSimpleName();
-			final Entry<String, String> attr = new SimpleEntry<String, String>(
-					n, typ);
-			this.shapeAttrs.add(attr);
+			
 
 			// add to Database
 			final Name name = new NameImpl(n.toUpperCase());
@@ -175,7 +168,7 @@ public class ShapeImporter implements Importer {
 		final FeatureCollection<SimpleFeatureType, SimpleFeature> fCollection = new ListFeatureCollection(
 				dbSchema, featureList);
 		shpDataStore.dispose();
-		dbCollection.add(fCollection);
+		dbCollection = fCollection;
 
 	}
 

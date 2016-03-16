@@ -46,7 +46,7 @@ public class MapBean {
 		for (String layer : publisher.getLayers()) {
 			System.out.println(layer);
 			layers.add(new Layer(layer, publisher.getAttributes(layer),
-					publisher.getGeom(layer),publisher.getActiveAttr(layer)));
+					publisher.getGeom(layer), publisher.getActiveAttr(layer)));
 			System.out.println(publisher.getGeom(layer));
 		}
 		System.out.println("INFORMATION: Existing Layers added");
@@ -93,7 +93,8 @@ public class MapBean {
 					dbm.getgeomType())) {
 				setStyle(symbol, dbm.getTableName(), dbm.getgeomType());
 				layers.add(new Layer(dbm.getTableName(), publisher
-						.getAttributes(dbm.getTableName()), dbm.getgeomType(), styleAttr));
+						.getAttributes(dbm.getTableName()), dbm.getgeomType(),
+						styleAttr));
 				dialogMessage = "Layer published!";
 			} else {
 				try {
@@ -114,7 +115,7 @@ public class MapBean {
 
 	private void setStyle(String symbol, String name, String geom) {
 		List<Object> styleValues;
-		
+
 		try {
 			styleValues = dbm.getAttrValues(styleAttr, name);
 		} catch (IOException | SQLException e) {
@@ -128,21 +129,22 @@ public class MapBean {
 
 	public void changeStyle(String layer) {
 		publisher = new GeoserverLayerPublisher();
-		String styleName = layer+"-"+styleAttr;
-		if (publisher.existsStyle(styleName)){
+		String styleName = layer + "-" + styleAttr;
+		if (publisher.existsStyle(styleName)) {
 			publisher.setStyle(styleName, layer);
-		}
-		else{
-		String geom="";
-		for (Layer l : layers) {
-			if (l.getName().equals(layer)) {
-				geom = l.getGeometry();
-				dbm.setAttributes(l.getAttributes());
-				setStyle("circle", layer, geom);
-				break;
+		} else {
+			String geom = "";
+			for (Layer l : layers) {
+				if (l.getName().equals(layer)) {
+					geom = l.getGeometry();
+					dbm.setAttributes(l.getAttributes());
+					setStyle("circle", layer, geom);
+					break;
+				}
 			}
-		}}
+		}
 	}
+
 
 	public Set<String> getAttributes() {
 		return dbm.getAttributes().keySet();

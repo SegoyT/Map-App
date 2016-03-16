@@ -195,4 +195,5 @@ public class GeoserverLayerPublisher {
 		String attr = style.replace(layerName+"-", "");
 		return attr;
 	}
+
 }
