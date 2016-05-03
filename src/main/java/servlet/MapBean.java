@@ -54,7 +54,7 @@ public class MapBean {
 
 	public void upload(FileUploadEvent event) {
 		dialogMessage = "Something went wrong!";
-		UploadedFile file = event.getFile(); // Retrieves <input
+		UploadedFile file = event.getFile(); 
 		String fileName = file.getFileName();
 		try (InputStream fileContent = file.getInputstream()) {
 

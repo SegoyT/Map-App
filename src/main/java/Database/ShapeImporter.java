@@ -133,7 +133,6 @@ public class ShapeImporter implements Importer {
 					ad.isNillable(), ad.getDefaultValue());
 			dbSftBuilder.add(t);
 		}
-		// TODO: EPSG, wenn nicht automatisch erstellt wird übergeben lassen.
 		try {
 			String prj = shpSchema.getCoordinateReferenceSystem().toString();
 			this.epsg = Prj2Epsg.getEpsg(prj);

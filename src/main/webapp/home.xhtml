@@ -9,6 +9,7 @@
 <h:head>
 	<title>OpenLayers Demo</title>
 	<link rel="stylesheet" href="../Kartenapp/css/ol.css" type="text/css" />
+	<link rel="stylesheet" href="../Kartenapp/css/ol3-popup.css" />
 	<style type="text/css">
 html, body {
 	width: 100%;
@@ -71,7 +72,9 @@ html, body {
 <body>
 
 	<h:form id="map" class="map"></h:form>
-	<script src="../Kartenapp/js/ol.js"></script>
+	<script src="../Kartenapp/js/ol-debug.js"></script>
+	<script src="../Kartenapp/js/ol3-popup.js"></script>
+	<script src="../Kartenapp/js/reqwest.js"></script>
 	<script>
 		var osmLayer = new ol.layer.Tile({
 			source : new ol.source.OSM()
@@ -88,15 +91,17 @@ html, body {
 				zoom : 6
 			})
 		});
-		
-		function updateLayer(layerName){
+
+		function updateLayer(layerName) {
 			for (var i = layers.length - 1; i >= 0; i--) {
 				if (layers[i].get('name') == layerName) {
-					layers[i].getSource().updateParams({"time": Date.now()});
+					layers[i].getSource().updateParams({
+						"time" : Date.now()
+					});
 				}
+			}
 		}
-		}
-		
+
 		function addGsLayer(layerName) {
 			//var layer = layerName;
 			var imgLayer = new ol.layer.Image({
@@ -136,6 +141,71 @@ html, body {
 				}
 			}
 		}
+		var popup = new ol.Overlay.Popup();
+		map.addOverlay(popup);
+		// Add an event handler for the map "singleclick" event
+		map.on('singleclick', function(evt) {
+
+			// Hide existing popup and reset it's offset
+			popup.hide();
+			popup.setOffset([ 0, 0 ]);
+
+			// Attempt to find a marker from the planningAppsLayer
+			var feature = map.forEachFeatureAtPixel(evt.pixel, function(
+					feature, layer) {
+				return feature;
+			});
+
+			if (feature) {
+
+				var coord = feature.getGeometry().getCoordinates();
+				var props = feature.getProperties();
+				var info = "<h2><a href=" + props.caseurl + ">"
+						+ props.casereference + "</a></h2>";
+				info += "<p>" + props.locationtext + "</p>";
+				info += "<p>Status: " + props.status + " " + props.statusdesc
+						+ "</p>";
+				// Offset the popup so it points at the middle of the marker not the tip
+				popup.setOffset([ 0, -22 ]);
+				popup.show(coord, info);
+
+			} else {
+				for (var i = layers.length - 1; i != 0; i--) {
+					if (layers[i].getVisible()) {
+						var info = "";
+						var layer = layers[i].get('name');
+						var url = layers[i].getSource().getGetFeatureInfoUrl(
+								evt.coordinate, map.getView().getResolution(),
+								map.getView().getProjection(), {
+									'INFO_FORMAT' : 'application/json',
+									'featureCount' : '50'
+								});
+
+						reqwest({
+							url : url,
+							type : 'json',
+						}).then(
+								function(data) {
+									var name = layer;
+									var feature = data.features[0];
+									var props = feature.properties;
+									var result = "";
+									for ( var l in props) {
+										if (props.hasOwnProperty(l)) {
+											result += l + " : " + props[l]
+													+ "<br />";
+										}
+									}
+									info += "<h2>" + name + "</h2><p>"
+											 + result + "</p>";
+									popup.show(evt.coordinate, info);
+								});
+
+					}
+				}
+			}
+
+		});
 	</script>
 
 
@@ -150,12 +220,12 @@ html, body {
 					<p:selectBooleanCheckbox value="#{layer.active}">
 						<f:ajax event="change" render="layerupdate " />
 
-					</p:selectBooleanCheckbox>			
-						<p:panelGrid id="layerupdate">
-							<h:outputScript>				
+					</p:selectBooleanCheckbox>
+					<p:panelGrid id="layerupdate">
+						<h:outputScript>				
 									setLayerVisible("#{layer.name}", "#{layer.active}")
 							</h:outputScript>
-						</p:panelGrid>
+					</p:panelGrid>
 				</p:column>
 				<p:column>
 					<p:accordionPanel id="accPan" styleClass="accPan"
@@ -177,21 +247,22 @@ html, body {
 							<p:selectOneMenu id="attributes" value="#{MapBean.styleAttr}"
 								style="font-size:12px">
 								<p:ajax event="change"
-									listener="#{MapBean.changeStyle(layer.name)}"  update="styleUpdate legend accPan" />
+									listener="#{MapBean.changeStyle(layer.name)}"
+									update="styleUpdate legend accPan" />
 								<f:selectItem itemLabel="#{layer.activeAttr}" itemValue=""
 									noSelectionOption="true" />
 								<f:selectItems value="#{layer.getAttrKeys()}" />
 							</p:selectOneMenu>
-							<p:panelGrid id= "styleUpdate">
-							<h:outputScript>
+							<p:panelGrid id="styleUpdate">
+								<h:outputScript>
 								updateLayer("#{layer.name}")
 							</h:outputScript>
 							</p:panelGrid>
 							<br />
 							<p:panelGrid id="legend">
-							<p:graphicImage title="Legend" cache="false" 
-								url="http://localhost:8082/geoserver/wms?REQUEST=GetLegendGraphic&amp;VERSION=1.0.0&amp;FORMAT=image/png&amp;WIDTH=20&amp;HEIGHT=20&amp;LAYER=Postgis:#{layer.name}">
-							</p:graphicImage>
+								<p:graphicImage title="Legend" cache="false"
+									url="http://localhost:8082/geoserver/wms?REQUEST=GetLegendGraphic&amp;VERSION=1.0.0&amp;FORMAT=image/png&amp;WIDTH=20&amp;HEIGHT=20&amp;LAYER=Postgis:#{layer.name}">
+								</p:graphicImage>
 							</p:panelGrid>
 						</p:tab>
 					</p:accordionPanel>

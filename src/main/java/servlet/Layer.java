@@ -7,9 +7,9 @@ public class Layer {
 
 	private final String name;
 	private final Map<String, String> attributes;
-	private boolean active = true;
+	private boolean active = false;
 	private int opacity = 30;
-	private String geometry;
+	private final String geometry;
 	private String activeAttr;
 
 	public Layer(String name, Map<String, String> attrs, String geomType, String activeAttr) {
@@ -23,10 +23,7 @@ public class Layer {
 		return geometry;
 	}
 
-	public void setGeometry(String geometry) {
-		this.geometry = geometry;
-	}
-
+	
 	public int getOpacity() {
 		return opacity;
 	}
